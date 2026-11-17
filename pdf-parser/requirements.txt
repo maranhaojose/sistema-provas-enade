@@ -1,0 +1,5 @@
+# Leitor e extrator de PDF de alto desempenho
+pymupdf>=1.24.0
+
+# Biblioteca alternativa baseada em layout/tabelas
+pdfplumber>=0.11.0
