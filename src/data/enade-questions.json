@@ -1,0 +1,959 @@
+{
+  "examMeta": {
+    "title": "Simulado ENADE",
+    "course": "Sistemas de Computação",
+    "year": 2023,
+    "durationMinutes": 120
+  },
+  "student": {
+    "name": "Ana Beatriz Moraes",
+    "registration": "2021.1.04512",
+    "initials": "AM",
+    "course": "Sistemas de Computação"
+  },
+  "globalStudySummary": {
+    "baseAnswered": 14,
+    "baseCorrect": 11,
+    "completedExams": 3,
+    "weeklyGoalTarget": 25,
+    "weeklyGoalCurrent": 14
+  },
+  "areas": [
+    {
+      "id": "area-eng-software",
+      "slug": "engenharia-de-software",
+      "title": "Engenharia de Software",
+      "category": "Desenvolvimento",
+      "description": "Arquitetura, padrões de projeto GoF, princípios SOLID, engenharia de requisitos, testes automatizados e metodologias ágeis.",
+      "subtopics": ["Padrões GoF", "SOLID", "Scrum & Kanban", "Testes de Software", "UML"],
+      "answeredQuestions": 2,
+      "accuracyPercent": 81,
+      "defaultDifficulty": "Fácil",
+      "status": "Em andamento",
+      "iconName": "Code2",
+      "questions": [
+        {
+          "id": "enade-2023-es-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Uma fintech está migrando seu sistema monolítico de processamento de pagamentos para uma arquitetura de microsserviços. Durante o desenho da solução, o arquiteto destacou a necessidade de garantir consistência eventual em transações distribuídas que envolvem reserva de saldo, validação antifraude e emissão de comprovante, evitando bloqueios síncronos prolongados (2PC) entre bancos de dados distintos.",
+            "Para coordenar a sequência de transações locais e executar ações de compensação caso uma das etapas falhe, a equipe decidiu adotar um padrão arquitetural específico para sistemas distribuídos."
+          ],
+          "command": "Qual padrão arquitetural atende diretamente ao requisito de transações distribuídas com ações compensatórias descrito no cenário?",
+          "alternatives": [
+            { "letter": "A", "text": "Circuit Breaker, que reverte automaticamente registros gravados em bancos de dados relacionais quando ocorre timeout de rede." },
+            { "letter": "B", "text": "API Gateway, que mantém bloqueio pessimista global nas tabelas de todos os microsserviços até a conclusão da requisição." },
+            { "letter": "C", "text": "Service Registry, que sincroniza réplicas de banco de dados por meio de commit em duas fases (Two-Phase Commit)." },
+            { "letter": "D", "text": "Saga Pattern, que coordena transações locais por coreografia de eventos ou orquestração e dispara transações de compensação em caso de falha." },
+            { "letter": "E", "text": "Bulkhead, que unifica os esquemas de dados em uma instância compartilhada para garantir atomicidade imediata." }
+          ],
+          "correctIndex": 3,
+          "explanation": "O padrão Saga gerencia dados entre múltiplos microsserviços por meio de uma sequência de transações locais. Se uma etapa falha, a Saga executa transações compensatórias para desfazer o impacto das etapas anteriores, garantindo consistência eventual sem usar Two-Phase Commit (2PC). Circuit Breaker evita chamadas repetidas a serviços indisponíveis, API Gateway roteia requisições e Bulkhead isola recursos."
+        },
+        {
+          "id": "enade-2022-es-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Durante uma revisão de código (code review), a equipe identificou uma classe que viola os princípios SOLID por depender diretamente de implementações concretas de envio de notificações por e-mail e SMS, dificultando a criação de testes unitários com dublês de teste (mocks)."
+          ],
+          "supportBlock": {
+            "title": "Trecho analisado no Code Review",
+            "language": "TypeScript",
+            "content": "class PedidoService {\n  private emailSender = new SmtpEmailSender();\n\n  finalizar(pedido: Pedido): void {\n    // lógica de negócio\n    this.emailSender.enviar(pedido.clienteEmail, \"Pedido confirmado\");\n  }\n}"
+          },
+          "command": "Qual princípio do SOLID é violado diretamente pelo acoplamento com a classe concreta SmtpEmailSender e qual refatoração o corrige?",
+          "alternatives": [
+            { "letter": "A", "text": "Princípio da Substituição de Liskov (LSP); deve-se tornar a classe PedidoService abstrata." },
+            { "letter": "B", "text": "Princípio da Inversão de Dependência (DIP); PedidoService deve depender de uma interface (ex.: Notificador) injetada em seu construtor." },
+            { "letter": "C", "text": "Princípio da Segregação de Interface (ISP); deve-se transformar todos os métodos de SmtpEmailSender em métodos estáticos." },
+            { "letter": "D", "text": "Princípio da Responsabilidade Única (SRP); a solução é mover o cálculo do pedido para dentro de SmtpEmailSender." },
+            { "letter": "E", "text": "Princípio Aberto-Fechado (OCP); corrige-se declarando o atributo emailSender como público." }
+          ],
+          "correctIndex": 1,
+          "explanation": "O Princípio da Inversão de Dependência (DIP) estabelece que módulos de alto nível (PedidoService) não devem depender de módulos de baixo nível (SmtpEmailSender), mas ambos devem depender de abstrações (interfaces). Ao injetar uma interface no construtor, desacopla-se a regra de negócio da infraestrutura e viabiliza-se o uso de mocks em testes unitários."
+        },
+        {
+          "id": "enade-2021-es-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Uma equipe ágil utiliza Scrum no desenvolvimento de um prontuário eletrônico hospitalar. Na metade de uma Sprint de duas semanas, o diretor comercial solicita a inclusão imediata de um novo relatório regulatório que não estava previsto no Sprint Backlog, embora a Meta da Sprint continue válida.",
+            "Segundo o Guia do Scrum, o time precisa lidar com solicitações externas sem comprometer a previsibilidade e a inspeção do incremento."
+          ],
+          "command": "Qual é a conduta adequada diante dessa solicitação durante a Sprint em andamento?",
+          "alternatives": [
+            { "letter": "A", "text": "O Scrum Master deve cancelar a Sprint imediatamente e iniciar uma nova Sprint Planning." },
+            { "letter": "B", "text": "Os Developers devem interromper as tarefas em curso e implementar o relatório por ordem direta do diretor comercial." },
+            { "letter": "C", "text": "O item deve ser registrado e refinado pelo Product Owner no Product Backlog para priorização em uma próxima Sprint, ou negociado com os Developers caso não coloque em risco a Meta da Sprint." },
+            { "letter": "D", "text": "A Sprint deve ter sua duração estendida em mais uma semana para absorver a nova demanda sem remover itens." },
+            { "letter": "E", "text": "O Product Owner deve substituir unilateralmente as tarefas em andamento na Daily Scrum." }
+          ],
+          "correctIndex": 2,
+          "explanation": "Durante a Sprint, nenhuma mudança que coloque em risco a Meta da Sprint deve ser feita, e a duração da Sprint é fixa (time-boxed). Novas demandas entram no Product Backlog sob responsabilidade do Product Owner para priorização futura, ou o escopo pode ser renegociado entre Product Owner e Developers sem ferir a Meta da Sprint."
+        },
+        {
+          "id": "enade-2019-es-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "No planejamento da estratégia de testes automatizados de uma aplicação web corporativa, o engenheiro de qualidade estruturou a suíte seguindo o conceito de Pirâmide de Testes proposta por Mike Cohn.",
+            "O objetivo da equipe é obter feedback rápido nos pipelines de Integração Contínua (CI) mantendo baixo custo de manutenção e alta confiabilidade."
+          ],
+          "command": "De acordo com a Pirâmide de Testes, como devem ser distribuídos os testes automatizados da base para o topo?",
+          "alternatives": [
+            { "letter": "A", "text": "Base composta por testes End-to-End (E2E) de interface gráfica, meio com testes manuais exploratórios e topo com testes unitários." },
+            { "letter": "B", "text": "Proporção idêntica entre testes unitários, testes de carga e testes de aceitação em produção." },
+            { "letter": "C", "text": "Exclusivamente testes de interface gráfica automatizados, pois dispensam a validação das camadas de domínio." },
+            { "letter": "D", "text": "Base de testes de banco de dados em ambiente produtivo e topo de análise estática de código." },
+            { "letter": "E", "text": "Base ampla de testes unitários rápidos e isolados, camada intermediária de testes de integração/serviço e topo reduzido com testes End-to-End (UI)." }
+          ],
+          "correctIndex": 4,
+          "explanation": "A Pirâmide de Testes preconiza uma grande quantidade de testes unitários na base (rápidos, baratos e determinísticos), uma camada intermediária de testes de integração/serviços e uma pequena quantidade de testes End-to-End (E2E/UI) no topo, que são mais lentos e custosos de manter."
+        },
+        {
+          "id": "enade-2017-es-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Uma equipe de desenvolvimento de um sistema de vendas possui um método que calcula o valor final de um pedido e hoje contém uma cadeia de condicionais que cresce a cada nova regra de desconto: desconto para clientes premium, cupom promocional, frete gratuito por região e, recentemente, desconto progressivo por volume.",
+            "Cada alteração obriga a reabrir e retestar o método original, o que tem gerado regressões frequentes. A equipe busca um padrão que permita encapsular cada regra em uma classe própria, trocável em tempo de execução, sem alterar o contexto que as utiliza."
+          ],
+          "command": "O padrão de projeto mais adequado para resolver esse problema é o",
+          "alternatives": [
+            { "letter": "A", "text": "Singleton, que garante uma única instância da calculadora de descontos." },
+            { "letter": "B", "text": "Factory Method, que centraliza a criação dos objetos de pedido." },
+            { "letter": "C", "text": "Strategy, que encapsula cada algoritmo de desconto em uma classe e permite alterná-los em tempo de execução." },
+            { "letter": "D", "text": "Observer, que notifica os módulos interessados quando o valor do pedido muda." },
+            { "letter": "E", "text": "Decorator, que adiciona responsabilidades a um objeto por meio de herança múltipla." }
+          ],
+          "correctIndex": 2,
+          "explanation": "O Strategy encapsula uma família de algoritmos intercambiáveis (cada regra de desconto em sua própria classe) e permite selecioná-los em tempo de execução, eliminando a cadeia de condicionais e favorecendo o princípio Aberto/Fechado: novas regras entram sem modificar o contexto."
+        }
+      ]
+    },
+    {
+      "id": "area-banco-dados",
+      "slug": "banco-de-dados",
+      "title": "Banco de Dados",
+      "category": "Desenvolvimento",
+      "description": "Modelagem relacional, formas normais (1FN a BCNF), consultas SQL avançadas, indexação, controle de concorrência e transações ACID.",
+      "subtopics": ["Normalização", "SQL & Álgebra", "Transações ACID", "Índices B-Tree", "NoSQL"],
+      "answeredQuestions": 2,
+      "accuracyPercent": 77,
+      "defaultDifficulty": "Média",
+      "status": "Alta incidência",
+      "iconName": "Database",
+      "questions": [
+        {
+          "id": "enade-2023-bd-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Um administrador de banco de dados (DBA) analisou o desempenho de uma consulta crítica em uma tabela PostgreSQL com 50 milhões de notas fiscais. A consulta filtra os registros pelo CNPJ do emitente e pelo intervalo de data de emissão, ordenando o resultado pela data de emissão."
+          ],
+          "supportBlock": {
+            "title": "Consulta SQL analisada",
+            "language": "SQL",
+            "content": "SELECT numero_nota, valor_total, data_emissao\nFROM nota_fiscal\nWHERE cnpj_emitente = '12345678000199'\n  AND data_emissao BETWEEN '2023-01-01' AND '2023-03-31'\nORDER BY data_emissao DESC;"
+          },
+          "command": "Qual estrutura de índice é mais eficiente para otimizar simultaneamente o filtro por igualdade, o filtro por intervalo e a ordenação dessa consulta?",
+          "alternatives": [
+            { "letter": "A", "text": "Um índice B-Tree composto pelas colunas (cnpj_emitente, data_emissao), nessa ordem." },
+            { "letter": "B", "text": "Um índice Hash simples apenas sobre a coluna data_emissao." },
+            { "letter": "C", "text": "Um índice B-Tree composto pelas colunas (valor_total, numero_nota), nessa ordem." },
+            { "letter": "D", "text": "Dois índices Hash independentes, pois índices Hash suportam nativamente buscas por intervalo (BETWEEN) e ordenação." },
+            { "letter": "E", "text": "A remoção da chave primária da tabela para forçar uma varredura sequencial (Sequential Scan) em memória." }
+          ],
+          "correctIndex": 0,
+          "explanation": "Em um índice B-Tree composto, a coluna filtrada por igualdade (cnpj_emitente) deve vir primeiro, seguida pela coluna usada em filtro de intervalo (BETWEEN) e ordenação (data_emissao). Índices Hash atendem apenas comparações de igualdade (=) e não suportam intervalos nem ordenação."
+        },
+        {
+          "id": "enade-2022-bd-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Difícil",
+          "statement": [
+            "Em um sistema bancário, duas transações concorrentes T1 e T2 acessam as contas dos clientes. Durante um teste de estresse, observou-se que a transação T1 executou duas vezes a mesma consulta SELECT com cláusula WHERE sobre o saldo das contas de uma agência e obteve um conjunto com 10 linhas na primeira leitura e 11 linhas na segunda leitura, porque T2 inseriu e confirmou (COMMIT) uma nova conta nesse intervalo."
+          ],
+          "command": "Como é denominado esse fenômeno de concorrência e qual nível de isolamento do padrão SQL o impede?",
+          "alternatives": [
+            { "letter": "A", "text": "Leitura Suja (Dirty Read); impedido pelo nível Read Uncommitted." },
+            { "letter": "B", "text": "Leitura Fantasma (Phantom Read); impedido pelo nível Serializable." },
+            { "letter": "C", "text": "Perda de Atualização (Lost Update); impedido apenas desativando o log de transações (WAL)." },
+            { "letter": "D", "text": "Leitura Não Repetível (Non-Repeatable Read); impedido pelo nível Read Uncommitted." },
+            { "letter": "E", "text": "Deadlock; impedido pelo nível Read Committed sem uso de bloqueios." }
+          ],
+          "correctIndex": 1,
+          "explanation": "O aparecimento de novas tuplas que satisfazem a condição de busca de uma mesma transação devido a inserções confirmadas por outra transação concorrente denomina-se Leitura Fantasma (Phantom Read). No padrão SQL, o nível de isolamento Serializable previne leituras sujas, leituras não repetíveis e leituras fantasmas."
+        },
+        {
+          "id": "enade-2021-bd-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Considere um banco de dados universitário que possui as tabelas DEPARTAMENTO(id_depto, nome_depto) e PROFESSOR(id_prof, nome_prof, salario, id_depto). A coordenação deseja listar o nome de todos os departamentos que possuem média salarial dos professores superior a R$ 8.000,00, exibindo também essa média."
+          ],
+          "command": "Qual consulta SQL produz corretamente o relatório solicitado?",
+          "alternatives": [
+            { "letter": "A", "text": "SELECT d.nome_depto, AVG(p.salario) FROM DEPARTAMENTO d JOIN PROFESSOR p ON d.id_depto = p.id_depto WHERE AVG(p.salario) > 8000 GROUP BY d.nome_depto;" },
+            { "letter": "B", "text": "SELECT d.nome_depto, SUM(p.salario) FROM DEPARTAMENTO d LEFT JOIN PROFESSOR p ON d.id_depto = p.id_depto ORDER BY AVG(p.salario) > 8000;" },
+            { "letter": "C", "text": "SELECT d.nome_depto, COUNT(p.salario) FROM DEPARTAMENTO d, PROFESSOR p HAVING p.salario > 8000;" },
+            { "letter": "D", "text": "SELECT d.nome_depto, AVG(p.salario) FROM DEPARTAMENTO d JOIN PROFESSOR p ON d.id_depto = p.id_depto GROUP BY d.id_depto, d.nome_depto HAVING AVG(p.salario) > 8000;" },
+            { "letter": "E", "text": "SELECT d.nome_depto, AVG(p.salario) FROM DEPARTAMENTO d GROUP BY p.salario WHERE p.salario > 8000;" }
+          ],
+          "correctIndex": 3,
+          "explanation": "Funções de agregação como AVG() não podem ser filtradas diretamente na cláusula WHERE; o filtro sobre grupos agregados deve ser feito na cláusula HAVING após o GROUP BY. Portanto, agrupa-se por departamento (GROUP BY d.id_depto, d.nome_depto) e filtra-se com HAVING AVG(p.salario) > 8000."
+        },
+        {
+          "id": "enade-2019-bd-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Uma instituição de ensino mantém a relação R(Matrícula, NomeAluno, CódDisciplina, NomeDisciplina, Nota), cuja chave primária é composta por (Matrícula, CódDisciplina). Ao auditar o esquema, o analista identificou as seguintes dependências funcionais:"
+          ],
+          "supportBlock": {
+            "title": "Dependências funcionais identificadas",
+            "language": "Texto",
+            "content": "Matrícula, CódDisciplina  →  Nota\nMatrícula                  →  NomeAluno\nCódDisciplina              →  NomeDisciplina"
+          },
+          "command": "A relação R, no estado atual, viola qual forma normal e qual é a decomposição que a corrige?",
+          "alternatives": [
+            { "letter": "A", "text": "Viola a 1FN, pois há atributos multivalorados; a correção exige uma tabela separada para as notas." },
+            { "letter": "B", "text": "Não viola a 2FN, mas apenas a 4FN por possuir dependências multivaloradas." },
+            { "letter": "C", "text": "Viola a 2FN, pois NomeAluno e NomeDisciplina dependem parcialmente da chave primária composta; a decomposição em Aluno(Matrícula, NomeAluno), Disciplina(CódDisciplina, NomeDisciplina) e Nota(Matrícula, CódDisciplina, Nota) corrige o esquema até a 3FN." },
+            { "letter": "D", "text": "Não viola forma normal alguma, pois toda relação com chave composta está automaticamente na 3FN." },
+            { "letter": "E", "text": "Viola a BCNF, mas nenhuma decomposição é possível sem perda de informação, logo o esquema deve ser mantido." }
+          ],
+          "correctIndex": 2,
+          "explanation": "Como a chave primária é composta por (Matrícula, CódDisciplina) e os atributos não-chave NomeAluno e NomeDisciplina dependem apenas de parte da chave (Matrícula → NomeAluno e CódDisciplina → NomeDisciplina), há dependência funcional parcial, violando a 2FN. A decomposição em Aluno, Disciplina e Nota elimina as dependências parciais e coloca todas as relações na 3FN/BCNF."
+        },
+        {
+          "id": "enade-2017-bd-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Sistemas Gerenciadores de Banco de Dados (SGBDs) relacionais garantem a confiabilidade das transações por meio das propriedades ACID (Atomicidade, Consistência, Isolamento e Durabilidade).",
+            "Após a confirmação (COMMIT) de uma transferência financeira, ocorreu uma queda abrupta de energia elétrica no servidor antes que os blocos de dados modificados no buffer de memória principal tivessem sido gravados nos arquivos definitivos de dados em disco."
+          ],
+          "command": "Qual propriedade ACID garante que os efeitos da transação confirmada não sejam perdidos após o reinício do servidor e qual mecanismo é classicamente utilizado pelo SGBD para implementá-la?",
+          "alternatives": [
+            { "letter": "A", "text": "Isolamento; implementada pelo descarte completo de todas as transações confirmadas nas últimas 24 horas." },
+            { "letter": "B", "text": "Atomicidade; implementada exclusivamente por gatilhos (triggers) definidos pela aplicação cliente." },
+            { "letter": "C", "text": "Consistência; implementada pela desativação de chaves estrangeiras durante picos de carga." },
+            { "letter": "D", "text": "Durabilidade; implementada mantendo os dados apenas em memória cache L1 da CPU." },
+            { "letter": "E", "text": "Durabilidade; implementada por meio do registro prévio em log de transações em armazenamento não volátil (Write-Ahead Logging — WAL) e operação de REDO na recuperação." }
+          ],
+          "correctIndex": 4,
+          "explanation": "A Durabilidade assegura que, uma vez confirmada (COMMIT), os efeitos da transação persistem mesmo diante de falhas de energia ou sistema. Os SGBDs implementam isso gravando os registros de log em disco antes do retorno do COMMIT (Write-Ahead Logging — WAL) e executando o procedimento de REDO durante o recovery."
+        }
+      ]
+    },
+    {
+      "id": "area-grafos-algoritmos",
+      "slug": "grafos-e-algoritmos",
+      "title": "Grafos e Algoritmos",
+      "category": "Matemática e Teoria",
+      "description": "Análise assintótica, algoritmos de busca e ordenação, caminhos mínimos (Dijkstra, Bellman-Ford), árvores geradoras e programação dinâmica.",
+      "subtopics": ["Complexidade O(n)", "Dijkstra & BFS/DFS", "Programação Dinâmica", "NP-Completude"],
+      "answeredQuestions": 2,
+      "accuracyPercent": 72,
+      "defaultDifficulty": "Difícil",
+      "status": "Alta incidência",
+      "iconName": "GitFork",
+      "questions": [
+        {
+          "id": "enade-2023-ga-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Uma empresa de logística modela sua malha viária como um grafo ponderado direcionado G = (V, E), em que os vértices representam centros de distribuição e as arestas possuem pesos não negativos correspondentes ao tempo de deslocamento entre eles.",
+            "Para calcular a rota mais rápida a partir de um centro de distribuição origem s para todos os demais centros, a equipe implementou o algoritmo de Dijkstra utilizando uma fila de prioridade baseada em heap binário (min-heap)."
+          ],
+          "command": "Qual é a complexidade assintótica de tempo dessa implementação e por que o algoritmo de Dijkstra exige pesos não negativos nas arestas?",
+          "alternatives": [
+            { "letter": "A", "text": "O(|V|³); porque o algoritmo percorre todas as matrizes de adjacência três vezes." },
+            { "letter": "B", "text": "O((|V| + |E|) log |V|); porque a escolha gulosa assume que adicionar uma aresta a um caminho nunca reduz o seu custo acumulado." },
+            { "letter": "C", "text": "O(|V| · |E|); porque pesos negativos causam estouro de pilha na recursão da busca em profundidade." },
+            { "letter": "D", "text": "O(log |V|); porque o algoritmo descarta metade dos vértices a cada iteração." },
+            { "letter": "E", "text": "O(2^|V|); porque o problema do caminho mínimo com pesos positivos é NP-Completo." }
+          ],
+          "correctIndex": 1,
+          "explanation": "Com heap binário e lista de adjacências, o algoritmo de Dijkstra realiza |V| extrações de mínimo e até |E| reduções de chave, resultando em O((|V| + |E|) log |V|). Sua premissa gulosa depende de pesos não negativos: quando um vértice u tem distância mínima fixada, nenhum caminho passando por vértices ainda não visitados pode oferecer distância menor."
+        },
+        {
+          "id": "enade-2022-ga-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Difícil",
+          "statement": [
+            "Considere um algoritmo de divisão e conquista que resolve um problema de tamanho n dividindo-o em 2 subproblemas de tamanho n/2, realizando trabalho adicional linear Θ(n) para combinar as soluções parciais."
+          ],
+          "supportBlock": {
+            "title": "Relação de recorrência do algoritmo",
+            "language": "Matemática",
+            "content": "T(n) = 2 · T(n / 2) + Θ(n),  com T(1) = Θ(1)"
+          },
+          "command": "Aplicando o Teorema Mestre, qual é a solução assintótica para T(n) e qual algoritmo clássico de ordenação apresenta exatamente esse comportamento no pior caso?",
+          "alternatives": [
+            { "letter": "A", "text": "Θ(n²); Bubble Sort." },
+            { "letter": "B", "text": "Θ(log n); Quick Sort sem pivô aleatório." },
+            { "letter": "C", "text": "Θ(n log n); Merge Sort." },
+            { "letter": "D", "text": "Θ(n); Insertion Sort em vetor inversamente ordenado." },
+            { "letter": "E", "text": "Θ(n³); Heap Sort." }
+          ],
+          "correctIndex": 2,
+          "explanation": "Pelo Teorema Mestre, para T(n) = a T(n/b) + f(n) com a = 2, b = 2 e f(n) = Θ(n), temos n^(log_b a) = n^(log_2 2) = n¹. Como f(n) = Θ(n^(log_b a)), aplica-se o Caso 2 do Teorema Mestre, resultando em T(n) = Θ(n log n). O Merge Sort divide o vetor ao meio e intercala em tempo linear, garantindo Θ(n log n) inclusive no pior caso."
+        },
+        {
+          "id": "enade-2021-ga-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Uma operadora de telecomunicações precisa interligar 12 cidades com cabos de fibra óptica de modo que todas as cidades fiquem conectadas (direta ou indiretamente) com o menor custo total de cabeamento possível. O grafo que representa os custos entre pares de cidades é conexo, não direcionado e ponderado."
+          ],
+          "command": "Quais algoritmos clássicos resolvem esse problema de Árvore Geradora Mínima (MST) e quantas arestas terá a árvore resultante para as 12 cidades?",
+          "alternatives": [
+            { "letter": "A", "text": "Algoritmos de Kruskal e Prim; a árvore geradora mínima terá exatamente 11 arestas." },
+            { "letter": "B", "text": "Algoritmos de Floyd-Warshall e Bellman-Ford; a árvore terá 12 arestas." },
+            { "letter": "C", "text": "Busca em Largura (BFS) e Busca Binária; a árvore terá 24 arestas." },
+            { "letter": "D", "text": "Algoritmo de Kadane e Ordenação Topológica; a árvore terá 66 arestas." },
+            { "letter": "E", "text": "Algoritmos de Kruskal e Dijkstra; a árvore terá 10 arestas." }
+          ],
+          "correctIndex": 0,
+          "explanation": "O problema descreve a obtenção de uma Árvore Geradora Mínima (Minimum Spanning Tree — MST), resolvida pelos algoritmos gulosos de Kruskal e de Prim. Toda árvore com |V| vértices possui exatamente |V| - 1 arestas; logo, para 12 cidades, a MST possui 11 arestas."
+        },
+        {
+          "id": "enade-2019-ga-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Em um gerenciador de pacotes e compilação de código, cada módulo pode depender de outros módulos que precisam ser compilados antes dele. Essas relações de dependência são modeladas como um Grafo Direcionado Acíclico (DAG), no qual uma aresta (u, v) indica que o módulo u deve ser compilado antes do módulo v."
+          ],
+          "command": "Qual algoritmo produz uma sequência linear válida de compilação dos módulos que respeita todas as dependências?",
+          "alternatives": [
+            { "letter": "A", "text": "Algoritmo de Ford-Fulkerson para fluxo máximo em redes." },
+            { "letter": "B", "text": "Coloração de grafos bipartidos por meio de árvore B+." },
+            { "letter": "C", "text": "Algoritmo de Prim para detecção de ciclos eulerianos." },
+            { "letter": "D", "text": "Ordenação Topológica (Topological Sort), que pode ser obtida via algoritmo de Kahn (grau de entrada) ou Busca em Profundidade (DFS)." },
+            { "letter": "E", "text": "Busca Binária sobre a matriz de incidência não ordenada." }
+          ],
+          "correctIndex": 3,
+          "explanation": "A Ordenação Topológica de um Grafo Direcionado Acíclico (DAG) produz uma sequência linear dos vértices tal que, para toda aresta direcionada (u, v), u aparece antes de v na ordenação. É o algoritmo padrão para resolução de dependências de tarefas e compilação."
+        },
+        {
+          "id": "enade-2017-ga-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Difícil",
+          "statement": [
+            "A técnica de Programação Dinâmica é amplamente empregada para resolver problemas de otimização, como o Problema da Mochila 0-1 (0-1 Knapsack) e a Maior Subsequência Comum (LCS), reduzindo drasticamente o tempo de execução em comparação à força bruta recursiva."
+          ],
+          "command": "Quais são as duas propriedades fundamentais que um problema deve apresentar para que a Programação Dinâmica seja aplicável com eficiência?",
+          "alternatives": [
+            { "letter": "A", "text": "Escolha gulosa local e ausência total de recursão." },
+            { "letter": "B", "text": "Subestrutura ótima e superposição de subproblemas." },
+            { "letter": "C", "text": "Independência estrita entre subproblemas disjuntos e complexidade constante O(1)." },
+            { "letter": "D", "text": "Grafo bipartido conexo e chaves uniformemente distribuídas." },
+            { "letter": "E", "text": "Linearidade monotônica e memória secundária paginada." }
+          ],
+          "correctIndex": 1,
+          "explanation": "A Programação Dinâmica aplica-se quando o problema possui (1) subestrutura ótima — a solução ótima global pode ser construída a partir das soluções ótimas de seus subproblemas — e (2) superposição de subproblemas — o algoritmo recursivo resolve os mesmos subproblemas repetidas vezes, permitindo memorizar (memoization) ou tabular os resultados."
+        }
+      ]
+    },
+    {
+      "id": "area-redes",
+      "slug": "redes-de-computadores",
+      "title": "Redes de Computadores",
+      "category": "Infraestrutura",
+      "description": "Pilha TCP/IP e modelo OSI, controle de congestionamento (slow start), endereçamento IPv4/IPv6, sub-redes, roteamento, DNS e segurança.",
+      "subtopics": ["TCP/UDP & Slow Start", "Endereçamento CIDR", "Roteamento OSPF/BGP", "Segurança & TLS"],
+      "answeredQuestions": 2,
+      "accuracyPercent": 67,
+      "defaultDifficulty": "Difícil",
+      "status": "Recomendado",
+      "iconName": "Network",
+      "questions": [
+        {
+          "id": "enade-2023-rc-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Um administrador de redes recebeu o bloco de endereços IPv4 192.168.10.0/26 para alocar estações de trabalho em um novo laboratório universitário.",
+            "No endereçamento CIDR, o sufixo /26 indica que 26 bits são destinados à identificação da rede/sub-rede, restando os bits menos significativos para identificação dos hosts."
+          ],
+          "command": "Quantos endereços IP utilizáveis para hosts (excluindo endereço de rede e endereço de broadcast) estão disponíveis nessa sub-rede /26 e qual é a sua máscara em notação decimal pontilhada?",
+          "alternatives": [
+            { "letter": "A", "text": "64 hosts utilizáveis; máscara 255.255.255.128." },
+            { "letter": "B", "text": "30 hosts utilizáveis; máscara 255.255.255.224." },
+            { "letter": "C", "text": "62 hosts utilizáveis; máscara 255.255.255.192." },
+            { "letter": "D", "text": "126 hosts utilizáveis; máscara 255.255.255.192." },
+            { "letter": "E", "text": "254 hosts utilizáveis; máscara 255.255.255.0." }
+          ],
+          "correctIndex": 2,
+          "explanation": "Em um bloco IPv4 /26, restam 32 - 26 = 6 bits para hosts. O total de endereços é 2⁶ = 64; descontando-se o endereço de rede e o de broadcast, obtêm-se 64 - 2 = 62 hosts utilizáveis. Os 2 bits ligados no quarto octeto (11000000₂ = 192) resultam na máscara 255.255.255.192."
+        },
+        {
+          "id": "enade-2022-rc-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Difícil",
+          "statement": [
+            "Em uma conexão TCP estabelecida entre dois hospitais, o congestion window (cwnd) inicia em 1 MSS e opera em slow start. Suponha que não haja perda de pacotes, que o receptor não limite a janela e que cada RTT complete a transmissão e o reconhecimento dos segmentos enviados.",
+            "O mecanismo de slow start dobra o valor de cwnd a cada RTT até que seja atingido o limiar de slow start (ssthresh)."
+          ],
+          "command": "Após 4 RTTs completos a partir do início da conexão, qual é o tamanho da janela de congestionamento em MSS?",
+          "alternatives": [
+            { "letter": "A", "text": "8 MSS" },
+            { "letter": "B", "text": "16 MSS" },
+            { "letter": "C", "text": "4 MSS" },
+            { "letter": "D", "text": "32 MSS" },
+            { "letter": "E", "text": "9 MSS" }
+          ],
+          "correctIndex": 1,
+          "explanation": "No slow start, cwnd dobra a cada RTT: 1 MSS (início) → 2 MSS (1 RTT) → 4 MSS (2 RTTs) → 8 MSS (3 RTTs) → 16 MSS (4 RTTs). O valor cresce exponencialmente enquanto estiver abaixo do ssthresh."
+        },
+        {
+          "id": "enade-2021-rc-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Ao acessar um portal bancário via protocolo HTTPS (HTTP sobre TLS), o navegador e o servidor realizam um processo inicial de negociação (TLS Handshake) antes de transmitir os dados sensíveis da sessão.",
+            "Esse protocolo combina diferentes técnicas criptográficas para conciliar autenticação, verificação de integridade e alto desempenho na transferência de dados."
+          ],
+          "command": "Qual é o papel das criptografias assimétrica e simétrica em uma conexão TLS típica?",
+          "alternatives": [
+            { "letter": "A", "text": "A criptografia assimétrica é usada na autenticação e na negociação segura das chaves de sessão, enquanto a criptografia simétrica cifra o tráfego de dados da sessão com maior desempenho." },
+            { "letter": "B", "text": "A criptografia simétrica autentica o certificado digital da Autoridade Certificadora, e a assimétrica cifra todos os pacotes HTTP subsequentes." },
+            { "letter": "C", "text": "O TLS utiliza exclusivamente funções de hash MD5 sem uso de chaves simétricas ou assimétricas." },
+            { "letter": "D", "text": "A chave privada do servidor é enviada em texto claro ao navegador durante o pacote ClientHello." },
+            { "letter": "E", "text": "O TLS opera na camada física (Camada 1 do modelo OSI) substituindo o endereçamento MAC." }
+          ],
+          "correctIndex": 0,
+          "explanation": "No TLS, algoritmos assimétricos (como RSA ou ECDHE) e certificados digitais autenticam o servidor e permitem negociar com segurança um segredo compartilhado. A partir dele, chaves simétricas de sessão (ex.: AES-GCM) são usadas para cifrar o fluxo de dados, pois a criptografia simétrica é ordens de grandeza mais rápida."
+        },
+        {
+          "id": "enade-2019-rc-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "O roteamento na Internet é organizado de forma hierárquica em Sistemas Autônomos (Autonomous Systems — AS). Protocolos de roteamento interno (IGP) operam dentro de um mesmo AS, enquanto protocolos de roteamento externo (EGP) trocam informações de alcançabilidade entre diferentes Sistemas Autônomos."
+          ],
+          "command": "Assinale a alternativa que relaciona corretamente os protocolos OSPF e BGP às suas classificações e algoritmos subjacentes.",
+          "alternatives": [
+            { "letter": "A", "text": "O OSPF é um protocolo EGP baseado em vetor de distância com contagem até o infinito, e o BGP opera apenas em redes locais Ethernet." },
+            { "letter": "B", "text": "Tanto o OSPF quanto o BGP são protocolos da camada de enlace que utilizam tabelas ARP para roteamento interdomínio." },
+            { "letter": "C", "text": "O BGP é um protocolo IGP que utiliza inundação de pacotes UDP na porta 53 para resolver nomes de domínio." },
+            { "letter": "D", "text": "O OSPF substitui o protocolo IP na camada de rede, dispensando o uso de endereços lógicos." },
+            { "letter": "E", "text": "O OSPF é um protocolo IGP baseado em estado de enlace (Link-State / Dijkstra), enquanto o BGP é o protocolo EGP padrão da Internet baseado em vetor de caminhos (Path-Vector)." }
+          ],
+          "correctIndex": 4,
+          "explanation": "O OSPF (Open Shortest Path First) é um protocolo intradomínio (IGP) do tipo Link-State que executa o algoritmo de Dijkstra para construir a árvore de caminhos mais curtos. Já o BGP (Border Gateway Protocol) é o protocolo interdomínio (EGP) que conecta Sistemas Autônomos na Internet usando a abordagem Path-Vector e políticas de roteamento."
+        },
+        {
+          "id": "enade-2017-rc-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Aplicações distribuídas na camada de aplicação utilizam os serviços da camada de transporte, principalmente por meio dos protocolos TCP (Transmission Control Protocol) e UDP (User Datagram Protocol).",
+            "Considere três aplicações: (I) consulta padrão de resolução de nomes no DNS; (II) transferência confiável de arquivos via HTTP/HTTPS; (III) transmissão de voz em tempo real (VoIP) sensível à latência."
+          ],
+          "command": "Quais protocolos de transporte são tradicionalmente utilizados pelas aplicações (I), (II) e (III), respectivamente, e por qual razão?",
+          "alternatives": [
+            { "letter": "A", "text": "TCP, UDP e TCP; pois chamadas de voz exigem retransmissão obrigatória de todos os pacotes atrasados." },
+            { "letter": "B", "text": "UDP, UDP e UDP; pois o protocolo TCP foi descontinuado em redes IPv6." },
+            { "letter": "C", "text": "ICMP, ARP e BGP; pois são os únicos protocolos da camada de transporte." },
+            { "letter": "D", "text": "UDP, TCP e UDP; pois DNS e VoIP priorizam baixo overhead e baixa latência sem handshake prévio, enquanto HTTP exige entrega confiável e ordenada." },
+            { "letter": "E", "text": "TCP, TCP e TCP; pois o UDP não possui campo de porta de origem e destino em seu cabeçalho." }
+          ],
+          "correctIndex": 3,
+          "explanation": "Consultas DNS padrão (I) usam UDP (porta 53) para evitar a latência do three-way handshake em requisições curtas; HTTP/1.1 e HTTP/2 (II) usam TCP para garantir entrega confiável, ordenada e controle de congestionamento; e VoIP (III) usa UDP (com RTP) porque pacotes atrasados perdem utilidade em tempo real."
+        }
+      ]
+    },
+    {
+      "id": "area-sistemas-operacionais",
+      "slug": "sistemas-operacionais",
+      "title": "Sistemas Operacionais",
+      "category": "Infraestrutura",
+      "description": "Gerência de processos e threads, escalonamento de CPU, sincronização, impasses (deadlocks), memória virtual, paginação e sistemas de arquivos.",
+      "subtopics": ["Escalonamento", "Semáforos & Mutex", "Memória Virtual", "Deadlocks"],
+      "answeredQuestions": 2,
+      "accuracyPercent": 79,
+      "defaultDifficulty": "Média",
+      "status": "Em andamento",
+      "iconName": "Terminal",
+      "questions": [
+        {
+          "id": "enade-2023-so-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Em um sistema operacional multiprogramado, quatro processos concorrentes disputam o acesso exclusivo a recursos de E/S e bloqueios de banco de dados. Em determinado instante, nenhum dos quatro processos consegue progredir, pois cada um aguarda a liberação de um recurso retido por outro processo do mesmo conjunto, caracterizando um impasse (deadlock)."
+          ],
+          "command": "Segundo a formulação clássica de Coffman, quais são as quatro condições necessárias e simultâneas para a ocorrência de um deadlock?",
+          "alternatives": [
+            { "letter": "A", "text": "Paginação por demanda, troca de contexto, inversão de prioridade e inanição (starvation)." },
+            { "letter": "B", "text": "Exclusão mútua, posse e espera (hold and wait), não preempção e espera circular." },
+            { "letter": "C", "text": "Preempção forçada, compartilhamento irrestrito de recursos, fila FIFO e espera linear." },
+            { "letter": "D", "text": "Fragmentação interna, fragmentação externa, thrashing e falta de página (page fault)." },
+            { "letter": "E", "text": "Escalonamento Round-Robin, semáforo binário, chamada de sistema fork() e interrupção de relógio." }
+          ],
+          "correctIndex": 1,
+          "explanation": "Um deadlock só ocorre se as quatro condições de Coffman estiverem presentes simultaneamente: (1) Exclusão mútua, (2) Posse e espera (Hold and Wait), (3) Não preempção de recursos já alocados e (4) Espera circular entre os processos."
+        },
+        {
+          "id": "enade-2022-so-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Considere um sistema com memória virtual baseada em paginação que dispõe de 3 quadros (frames) de página na memória física, inicialmente vazios. Um processo referencia a seguinte sequência de páginas:"
+          ],
+          "supportBlock": {
+            "title": "Sequência de referências a páginas",
+            "language": "Texto",
+            "content": "7, 0, 1, 2, 0, 3, 0, 4"
+          },
+          "command": "Utilizando o algoritmo de substituição de páginas LRU (Least Recently Used), quantas faltas de página (page faults) ocorrerão ao longo de toda a sequência?",
+          "alternatives": [
+            { "letter": "A", "text": "8 faltas de página." },
+            { "letter": "B", "text": "4 faltas de página." },
+            { "letter": "C", "text": "5 faltas de página." },
+            { "letter": "D", "text": "6 faltas de página." },
+            { "letter": "E", "text": "7 faltas de página." }
+          ],
+          "correctIndex": 3,
+          "explanation": "Passo a passo com 3 quadros no LRU: (1) 7 → [7] fault; (2) 0 → [7,0] fault; (3) 1 → [7,0,1] fault; (4) 2 substitui 7 (menos recentemente usado) → [2,0,1] fault; (5) 0 já está na memória → [2,0,1] hit; (6) 3 substitui 1 → [2,0,3] fault; (7) 0 já está na memória → [2,0,3] hit; (8) 4 substitui 2 → [4,0,3] fault. Total: 6 page faults e 2 hits."
+        },
+        {
+          "id": "enade-2021-so-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Em um servidor Linux de alto desempenho, o escalonador da CPU precisa distribuir o tempo de processamento entre processos interativos de usuários e tarefas de processamento em lote.",
+            "No algoritmo de escalonamento preemptivo Round-Robin (RR), a escolha do tamanho do quantum (fatia de tempo) impacta diretamente o tempo de resposta e a sobrecarga do sistema."
+          ],
+          "command": "O que acontece com o comportamento do escalonador Round-Robin quando o quantum tende ao infinito e quando o quantum é excessivamente pequeno?",
+          "alternatives": [
+            { "letter": "A", "text": "Quando o quantum é muito grande, ocorre thrashing de disco; quando é muito pequeno, elimina-se completamente o uso de interrupções de hardware." },
+            { "letter": "B", "text": "Em ambos os extremos, o algoritmo transforma-se no SJF (Shortest Job First) não preemptivo sem filas." },
+            { "letter": "C", "text": "Um quantum muito pequeno impede a execução de múltiplas threads do mesmo processo." },
+            { "letter": "D", "text": "Um quantum infinito garante tempo de resposta zero para processos interativos recém-chegados." },
+            { "letter": "E", "text": "Quando o quantum é muito grande, o Round-Robin degenera para o algoritmo FCFS (First-Come, First-Served); quando é muito pequeno, há alta sobrecarga (overhead) de trocas de contexto." }
+          ],
+          "correctIndex": 4,
+          "explanation": "Se o quantum for maior que o tempo de rajada (burst) de todos os processos, cada processo executará até terminar na ordem de chegada, igualando-se ao FCFS (FIFO). Se o quantum for curto demais, o processador gastará grande fração do tempo salvando e restaurando registradores em trocas de contexto."
+        },
+        {
+          "id": "enade-2019-so-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "No problema clássico do Produtor-Consumidor com buffer limitado de N posições, múltiplas threads produtoras inserem itens no buffer compartilhado enquanto threads consumidoras os removem.",
+            "Para evitar condições de corrida (race conditions) e espera ocupada (busy waiting), a solução clássica utiliza três semáforos: mutex, empty e full."
+          ],
+          "command": "Quais devem ser os valores iniciais dos semáforos mutex, empty e full, respectivamente, para um buffer inicialmente vazio de capacidade N?",
+          "alternatives": [
+            { "letter": "A", "text": "mutex = 1, empty = N, full = 0." },
+            { "letter": "B", "text": "mutex = 0, empty = 0, full = N." },
+            { "letter": "C", "text": "mutex = N, empty = 1, full = 1." },
+            { "letter": "D", "text": "mutex = 1, empty = 0, full = N." },
+            { "letter": "E", "text": "mutex = -1, empty = N, full = N." }
+          ],
+          "correctIndex": 0,
+          "explanation": "O semáforo binário mutex inicia em 1 para garantir exclusão mútua na seção crítica; o semáforo contador empty inicia em N porque todas as N posições do buffer estão livres; e o semáforo full inicia em 0 porque não há nenhum item produzido no início."
+        },
+        {
+          "id": "enade-2017-so-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Difícil",
+          "statement": [
+            "Durante o monitoramento de um servidor de aplicação, o administrador notou que a utilização da CPU caiu abruptamente para menos de 5%, enquanto a taxa de atividade do disco de swap atingiu 100%. Os processos ativos passavam quase todo o tempo aguardando operações de paginação entre a memória RAM e o disco, fenômeno conhecido como thrashing."
+          ],
+          "command": "Qual é a causa fundamental do thrashing e qual estratégia baseada no Modelo de Conjunto de Trabalho (Working Set) o sistema operacional pode adotar para contê-lo?",
+          "alternatives": [
+            { "letter": "A", "text": "Ocorre porque o processador executa instruções aritméticas rápido demais; o SO deve aumentar o grau de multiprogramação iniciando novos processos." },
+            { "letter": "B", "text": "Ocorre por excesso de memória RAM livre; a solução é reduzir o tamanho das páginas para 1 byte." },
+            { "letter": "C", "text": "Ocorre quando a soma dos conjuntos de trabalho (working sets) dos processos ativos excede a quantidade de quadros físicos disponíveis; o SO deve suspender (swap out) parte dos processos para reduzir o grau de multiprogramação." },
+            { "letter": "D", "text": "Ocorre devido a um deadlock na placa de rede; corrige-se desabilitando a memória cache L1." },
+            { "letter": "E", "text": "Ocorre apenas em sistemas monoprogramados sem memória virtual; corrige-se trocando o escalonador para FCFS." }
+          ],
+          "correctIndex": 2,
+          "explanation": "O thrashing acontece quando os processos não possuem quadros suficientes para manter suas páginas ativas (seu Working Set), gerando faltas de página contínuas. Reduzir o grau de multiprogramação (suspendendo temporariamente alguns processos) libera quadros para que os demais processos caibam na RAM e voltem a usar a CPU produtivamente."
+        }
+      ]
+    },
+    {
+      "id": "area-arquitetura",
+      "slug": "arquitetura-de-computadores",
+      "title": "Arquitetura de Computadores",
+      "category": "Infraestrutura",
+      "description": "Hierarquia de memória (cache L1/L2, AMAT), pipeline de instruções, hazards de dados e controle, conjunto de instruções RISC/CISC e paralelismo.",
+      "subtopics": ["Memória Cache & AMAT", "Pipeline & Hazards", "RISC vs CISC", "Multiprocessadores"],
+      "answeredQuestions": 2,
+      "accuracyPercent": 75,
+      "defaultDifficulty": "Média",
+      "status": "Em andamento",
+      "iconName": "Cpu",
+      "questions": [
+        {
+          "id": "enade-2023-ac-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Um processador possui uma cache L1 com tempo de acerto (hit time) de 1 ns e taxa de acerto de 95%. Em caso de falta, a penalidade média para buscar o bloco na memória principal é de 40 ns, e a cache é acessada antes de qualquer outro nível da hierarquia."
+          ],
+          "command": "Qual é o tempo médio de acesso à memória (AMAT) dessa configuração?",
+          "alternatives": [
+            { "letter": "A", "text": "3,0 ns" },
+            { "letter": "B", "text": "2,0 ns" },
+            { "letter": "C", "text": "2,9 ns" },
+            { "letter": "D", "text": "41,0 ns" },
+            { "letter": "E", "text": "1,05 ns" }
+          ],
+          "correctIndex": 0,
+          "explanation": "O tempo médio de acesso é AMAT = hit time + (taxa de falta × penalidade). Com 5% de faltas, AMAT = 1 ns + (0,05 × 40 ns) = 1 + 2 = 3,0 ns."
+        },
+        {
+          "id": "enade-2022-ac-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Em um processador RISC clássico com pipeline de 5 estágios (IF, ID, EX, MEM, WB), considere a execução sequencial das duas instruções assembly a seguir:"
+          ],
+          "supportBlock": {
+            "title": "Sequência de instruções no pipeline",
+            "language": "Assembly RISC",
+            "content": "ADD R1, R2, R3   ; R1 ← R2 + R3\nSUB R4, R1, R5   ; R4 ← R1 - R5"
+          },
+          "command": "Qual tipo de conflito (hazard) ocorre entre essas duas instruções e qual técnica de hardware permite resolvê-lo sem inserir bolhas (stalls) nesse caso?",
+          "alternatives": [
+            { "letter": "A", "text": "Hazard de controle por desvio condicional; resolvido apenas esvaziando todo o pipeline (flush)." },
+            { "letter": "B", "text": "Hazard estrutural por falta de memória secundária; resolvido duplicando o disco rígido." },
+            { "letter": "C", "text": "Hazard de dados do tipo RAW (Read After Write); resolvido por adiantamento de dados (forwarding / bypassing) do estágio EX/MEM para a entrada da ULA." },
+            { "letter": "D", "text": "Hazard de dados do tipo WAW (Write After Write); resolvido invertendo a ordem das instruções sem renomeação." },
+            { "letter": "E", "text": "Não há nenhum conflito, pois R1 já foi escrito no banco de registradores antes da busca (IF) da instrução SUB." }
+          ],
+          "correctIndex": 2,
+          "explanation": "A instrução SUB precisa ler o registrador R1 no estágio EX antes que a instrução ADD tenha gravado o resultado no banco de registradores no estágio WB, caracterizando uma dependência verdadeira de dados RAW (Read After Write). Como o resultado da soma já está disponível na saída da ULA ao final do estágio EX de ADD, a unidade de forwarding (bypassing) encaminha o valor diretamente para a entrada da ULA no estágio EX de SUB sem necessidade de stall."
+        },
+        {
+          "id": "enade-2021-ac-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Uma equipe de computação de alto desempenho está paralelizando um programa científico para rodar em um servidor com 8 núcleos de processamento. A análise de perfilamento mostrou que 80% do tempo de execução original do programa pode ser paralelizado perfeitamente entre os núcleos, enquanto os 20% restantes são estritamente sequenciais."
+          ],
+          "command": "De acordo com a Lei de Amdahl, qual é o ganho de velocidade (speedup) para 8 núcleos e qual é o limite teórico máximo de speedup caso o número de núcleos tenda ao infinito?",
+          "alternatives": [
+            { "letter": "A", "text": "Speedup de 8,00x para 8 núcleos; limite teórico máximo infinito." },
+            { "letter": "B", "text": "Speedup de 3,33x para 8 núcleos; limite teórico máximo de 5x." },
+            { "letter": "C", "text": "Speedup de 6,40x para 8 núcleos; limite teórico máximo de 80x." },
+            { "letter": "D", "text": "Speedup de 2,00x para 8 núcleos; limite teórico máximo de 2x." },
+            { "letter": "E", "text": "Speedup de 4,00x para 8 núcleos; limite teórico máximo de 10x." }
+          ],
+          "correctIndex": 1,
+          "explanation": "Pela Lei de Amdahl, Speedup(N) = 1 / ((1 - P) + P / N). Com P = 0,80 e N = 8: Speedup(8) = 1 / (0,20 + 0,80 / 8) = 1 / (0,20 + 0,10) = 1 / 0,30 ≈ 3,33x. Quando N → ∞, o termo P/N tende a 0, restando 1 / (1 - P) = 1 / 0,20 = 5x."
+        },
+        {
+          "id": "enade-2019-ac-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "As arquiteturas de conjunto de instruções (ISA) são historicamente classificadas segundo as filosofias RISC (Reduced Instruction Set Computer) e CISC (Complex Instruction Set Computer), exemplificadas por arquiteturas como ARM/RISC-V e x86, respectivamente."
+          ],
+          "command": "Qual característica é típica de uma arquitetura RISC em comparação a uma arquitetura CISC clássica?",
+          "alternatives": [
+            { "letter": "A", "text": "Instruções de tamanho altamente variável que realizam operações aritméticas diretamente sobre operandos na memória principal em uma única instrução." },
+            { "letter": "B", "text": "Uso intensivo de microcódigo complexo para interpretar cada instrução em dezenas de ciclos de clock." },
+            { "letter": "C", "text": "Ausência completa de pipeline de instruções para simplificar o hardware do processador." },
+            { "letter": "D", "text": "Instruções de tamanho fixo, arquitetura load/store (operações aritméticas ocorrem apenas entre registradores) e grande número de registradores de propósito geral." },
+            { "letter": "E", "text": "Execução exclusiva de instruções em ponto flutuante sem suporte a números inteiros." }
+          ],
+          "correctIndex": 3,
+          "explanation": "Arquiteturas RISC caracterizam-se por instruções de formato simples e tamanho fixo (facilitando a decodificação em pipeline), modelo load/store (apenas instruções de leitura/escrita acessam a memória) e amplo banco de registradores."
+        },
+        {
+          "id": "enade-2017-ac-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Difícil",
+          "statement": [
+            "Em um processador multicore com memória compartilhada, cada núcleo possui sua própria memória cache L1 privada. Quando dois núcleos leem a mesma linha de memória principal para suas caches L1 e, em seguida, o Núcleo 0 modifica o valor dessa variável, o sistema precisa garantir que o Núcleo 1 não utilize o valor antigo (obsoleto)."
+          ],
+          "command": "Como se denomina esse problema em sistemas multiprocessados e qual protocolo clássico o soluciona em nível de hardware?",
+          "alternatives": [
+            { "letter": "A", "text": "Coerência de Cache; solucionado por protocolos de snooping ou diretório como o protocolo MESI (Modified, Exclusive, Shared, Invalid)." },
+            { "letter": "B", "text": "Fragmentação Externa de Disco; solucionado pela desfragmentação do sistema de arquivos FAT32." },
+            { "letter": "C", "text": "Overclocking Assíncrono; solucionado desligando a memória virtual do sistema operacional." },
+            { "letter": "D", "text": "Inversão de Prioridade de Semáforo; solucionado pelo algoritmo de Bellman-Ford." },
+            { "letter": "E", "text": "Falta Compulsória de TLB; solucionado pelo uso de barramentos seriais RS-232." }
+          ],
+          "correctIndex": 0,
+          "explanation": "O problema de manter visões consistentes de um mesmo endereço de memória presente em múltiplas caches privadas é a Coerência de Cache. O protocolo MESI controla o estado de cada linha de cache (Modified, Exclusive, Shared, Invalid), invalidando ou atualizando cópias em outros núcleos quando ocorre uma escrita."
+        }
+      ]
+    },
+    {
+      "id": "area-ia",
+      "slug": "inteligencia-artificial",
+      "title": "Inteligência Artificial",
+      "category": "Matemática e Teoria",
+      "description": "Busca heurística (A*, Minimax), aprendizado de máquina supervisionado e não supervisionado, métricas de avaliação, redes neurais e lógica.",
+      "subtopics": ["Busca Heurística A*", "Machine Learning", "Árvores de Decisão", "Redes Neurais"],
+      "answeredQuestions": 1,
+      "accuracyPercent": 80,
+      "defaultDifficulty": "Média",
+      "status": "Recomendado",
+      "iconName": "BrainCircuit",
+      "questions": [
+        {
+          "id": "enade-2023-ia-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Um modelo de Aprendizado de Máquina foi desenvolvido para auxiliar no diagnóstico de uma doença rara presente em apenas 1% dos pacientes examinados. Ao avaliar o classificador em um conjunto de teste de 1.000 pacientes, obtiveram-se os seguintes resultados na matriz de confusão:"
+          ],
+          "supportBlock": {
+            "title": "Matriz de Confusão do Classificador",
+            "language": "Tabela",
+            "content": "Verdadeiros Positivos (VP) = 8   | Falsos Negativos (FN) = 2\nFalsos Positivos (FP)      = 12  | Verdadeiros Negativos (VN) = 978"
+          },
+          "command": "Quais são, respectivamente, os valores de Revocação (Recall / Sensibilidade) e Precisão (Precision) desse modelo para a classe positiva?",
+          "alternatives": [
+            { "letter": "A", "text": "Recall = 40% e Precisão = 80%." },
+            { "letter": "B", "text": "Recall = 98,6% e Precisão = 98,6%." },
+            { "letter": "C", "text": "Recall = 50% e Precisão = 90%." },
+            { "letter": "D", "text": "Recall = 8% e Precisão = 12%." },
+            { "letter": "E", "text": "Recall = 80% e Precisão = 40%." }
+          ],
+          "correctIndex": 4,
+          "explanation": "A Revocação (Recall) mede a proporção de casos positivos reais detectados: VP / (VP + FN) = 8 / (8 + 2) = 8 / 10 = 80%. A Precisão mede a proporção de predições positivas corretas: VP / (VP + FP) = 8 / (8 + 12) = 8 / 20 = 40%."
+        },
+        {
+          "id": "enade-2022-ia-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Em problemas de planejamento de rotas para robôs autônomos, o algoritmo de busca informada A* (A-Estrela) avalia cada nó n da fronteira por meio da função f(n) = g(n) + h(n), em que g(n) é o custo real do caminho desde o estado inicial até n, e h(n) é a estimativa heurística do custo de n até o objetivo."
+          ],
+          "command": "Qual condição a função heurística h(n) deve satisfazer para que o algoritmo A* em busca em árvore seja garantidamente ótimo (encontre a solução de menor custo)?",
+          "alternatives": [
+            { "letter": "A", "text": "Ser admissível, isto é, nunca superestimar o custo real para alcançar o objetivo: 0 ≤ h(n) ≤ h*(n)." },
+            { "letter": "B", "text": "Ser sempre maior que o dobro do custo real h*(n) para acelerar a poda de ramos ótimos." },
+            { "letter": "C", "text": "Assumir valores negativos crescentes conforme se aproxima do estado meta." },
+            { "letter": "D", "text": "Desconsiderar completamente o custo acumulado g(n), expandindo sempre o nó de maior profundidade." },
+            { "letter": "E", "text": "Expandir os nós em ordem estritamente LIFO sem fila de prioridade." }
+          ],
+          "correctIndex": 0,
+          "explanation": "Uma heurística h(n) é admissível quando nunca superestima o custo verdadeiro h*(n) até o objetivo (por exemplo, a distância euclidiana em linha reta em um mapa). Com uma heurística admissível (e consistente na busca em grafo), o algoritmo A* é completo e ótimo."
+        },
+        {
+          "id": "enade-2021-ia-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Durante o treinamento de uma rede neural profunda para previsão de preços de imóveis, a equipe observou que o erro no conjunto de treinamento caiu para próximo de zero após 500 épocas, mas o erro no conjunto de validação começou a subir continuamente a partir da época 80."
+          ],
+          "command": "Como se denomina esse fenômeno e quais técnicas são adequadas para mitigá-lo?",
+          "alternatives": [
+            { "letter": "A", "text": "Subajuste (Underfitting); deve ser mitigado removendo todos os dados de treinamento e zerando a taxa de aprendizado." },
+            { "letter": "B", "text": "Explosão de gradiente; mitigado treinando o modelo diretamente sobre o conjunto de teste." },
+            { "letter": "C", "text": "Sobreajuste (Overfitting); pode ser mitigado com Regularização (L1/L2), Dropout, parada antecipada (Early Stopping) e aumento de dados." },
+            { "letter": "D", "text": "Deadlock estatístico; mitigado substituindo a validação cruzada por um único exemplo de treino." },
+            { "letter": "E", "text": "Convergência ótima; indica que o modelo generaliza perfeitamente para dados inéditos." }
+          ],
+          "correctIndex": 2,
+          "explanation": "Quando o modelo memoriza ruídos e peculiaridades do conjunto de treino (baixo erro de treino) mas perde capacidade de generalização em dados não vistos (alto erro de validação), ocorre Overfitting (sobreajuste). Técnicas como Early Stopping, Dropout, regularização L1/L2 e validação cruzada combatem esse problema."
+        },
+        {
+          "id": "enade-2019-ia-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Uma rede varejista possui uma base histórica com o comportamento de compras de 200 mil clientes (frequência de visitas, ticket médio e categorias compradas), mas não possui nenhum rótulo prévio que classifique os perfis. A equipe de ciência de dados deseja agrupar automaticamente clientes com hábitos similares para criar campanhas segmentadas."
+          ],
+          "command": "Qual paradigma de Aprendizado de Máquina e qual algoritmo clássico são indicados para essa tarefa?",
+          "alternatives": [
+            { "letter": "A", "text": "Aprendizado Supervisionado de Regressão; algoritmo de Regressão Logística." },
+            { "letter": "B", "text": "Aprendizado Não Supervisionado (Agrupamento / Clustering); algoritmo K-Means." },
+            { "letter": "C", "text": "Busca Competitiva Adversária; algoritmo Minimax com poda Alfa-Beta." },
+            { "letter": "D", "text": "Aprendizado Supervisionado com Rótulos Discretos; algoritmo Naive Bayes." },
+            { "letter": "E", "text": "Compilação Léxica Determinística; algoritmo de Dijkstra." }
+          ],
+          "correctIndex": 1,
+          "explanation": "Como os dados não possuem rótulos (variável alvo), trata-se de Aprendizado Não Supervisionado na tarefa de agrupamento (clustering). O algoritmo K-Means particiona as observações em K grupos minimizando a variância intraclasse (distância aos centroides)."
+        },
+        {
+          "id": "enade-2017-ia-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Difícil",
+          "statement": [
+            "Em jogos de soma zero para dois jogadores com informação perfeita, como Xadrez e Jogo da Velha, o algoritmo Minimax explora a árvore de estados alternando níveis MAX (jogador que maximiza a utilidade) e MIN (adversário que minimiza a utilidade).",
+            "Para viabilizar a busca em profundidades maiores, aplica-se a técnica de Poda Alfa-Beta."
+          ],
+          "command": "Qual é o efeito da Poda Alfa-Beta sobre o resultado da decisão e sobre a complexidade de busca?",
+          "alternatives": [
+            { "letter": "A", "text": "Aproxima o resultado descartando aleatoriamente 50% das jogadas válidas, podendo escolher movimentos perdedores." },
+            { "letter": "B", "text": "Transforma o jogo determinístico em um problema não supervisionado de agrupamento." },
+            { "letter": "C", "text": "Aumenta o número de nós visitados para garantir que todas as folhas sejam avaliadas duas vezes." },
+            { "letter": "D", "text": "Retorna exatamente a mesma jogada ótima que o Minimax puro, mas elimina subárvores que não podem influenciar a decisão final, reduzindo no melhor caso o fator de ramificação efetivo de b^d para b^(d/2)." },
+            { "letter": "E", "text": "Só pode ser aplicada em árvores binárias com altura máxima igual a 2." }
+          ],
+          "correctIndex": 3,
+          "explanation": "A Poda Alfa-Beta mantém dois limites (α: melhor valor já garantido para MAX; β: melhor valor já garantido para MIN). Quando α ≥ β, o ramo restante é podado sem afetar a decisão final. Com ordenação ideal dos movimentos, a complexidade cai de O(b^d) para O(b^(d/2)), dobrando a profundidade alcançável no mesmo tempo."
+        }
+      ]
+    },
+    {
+      "id": "area-estrutura-dados",
+      "slug": "estrutura-de-dados",
+      "title": "Estrutura de Dados",
+      "category": "Fundamentos",
+      "description": "Listas encadeadas, pilhas, filas de prioridade (heaps), árvores binárias de busca, árvores balanceadas (AVL, Rubro-Negra) e tabelas hash.",
+      "subtopics": ["Busca Binária", "Árvores AVL & B", "Tabelas Hash", "Filas & Pilhas"],
+      "answeredQuestions": 3,
+      "accuracyPercent": 75,
+      "defaultDifficulty": "Média",
+      "status": "Alta incidência",
+      "iconName": "Layers",
+      "questions": [
+        {
+          "id": "enade-2023-ed-01",
+          "year": 2023,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Em uma Árvore Binária de Busca Balanceada (AVL), o fator de balanceamento de cada nó deve permanecer no conjunto {-1, 0, +1}. Considere uma árvore AVL inicialmente vazia na qual são inseridas, sequencialmente, as chaves 10, 20 e 30."
+          ],
+          "command": "Qual desbalanceamento ocorre após a inserção da chave 30, qual rotação é executada e qual chave passa a ocupar a raiz da árvore resultante?",
+          "alternatives": [
+            { "letter": "A", "text": "Desbalanceamento esquerda-direita (LR) no nó 30; aplica-se uma rotação dupla à direita, tornando o 10 a raiz." },
+            { "letter": "B", "text": "Não ocorre desbalanceamento; o nó 10 permanece na raiz e a árvore tem altura 3." },
+            { "letter": "C", "text": "Desbalanceamento direita-direita (RR) no nó 10; aplica-se uma rotação simples à esquerda, tornando o 20 a nova raiz com filhos 10 (esquerda) e 30 (direita)." },
+            { "letter": "D", "text": "Desbalanceamento direita-esquerda (RL); aplica-se rotação dupla à esquerda, tornando o 30 a nova raiz." },
+            { "letter": "E", "text": "A árvore AVL converte-se automaticamente em uma lista duplamente encadeada." }
+          ],
+          "correctIndex": 2,
+          "explanation": "Inserindo 10, depois 20 (à direita de 10) e depois 30 (à direita de 20), o nó 10 fica com subárvore esquerda de altura 0 e direita de altura 2 (fator de balanceamento -2 / caso Direita-Direita). Corrige-se com uma rotação simples à esquerda em torno de 10, elevando 20 para a raiz, com 10 à esquerda e 30 à direita."
+        },
+        {
+          "id": "enade-2022-ed-01",
+          "year": 2022,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Uma tabela de dispersão (Hash Table) de tamanho M = 10 utiliza a função de espalhamento h(k) = k mod 10 e tratamento de colisões por endereçamento aberto com sondagem linear (linear probing): h(k, i) = (h(k) + i) mod 10, para i = 0, 1, 2, ...",
+            "Com a tabela inicialmente vazia (índices de 0 a 9), são inseridas na ordem as chaves: 23, 43, 13 e 24."
+          ],
+          "command": "Em quais índices do vetor serão armazenadas as chaves 23, 43, 13 e 24, respectivamente?",
+          "alternatives": [
+            { "letter": "A", "text": "Índices 3, 3, 3 e 4." },
+            { "letter": "B", "text": "Índices 2, 4, 1 e 2." },
+            { "letter": "C", "text": "Índices 3, 4, 5 e 4." },
+            { "letter": "D", "text": "Índices 0, 1, 2 e 3." },
+            { "letter": "E", "text": "Índices 3, 4, 5 e 6." }
+          ],
+          "correctIndex": 4,
+          "explanation": "Calculando: h(23) = 3 (livre → posição 3); h(43) = 3 (ocupada → testa i=1: posição 4); h(13) = 3 (posições 3 e 4 ocupadas → posição 5); h(24) = 4 (posições 4 e 5 ocupadas → posição 6). Logo, as chaves ficam nos índices 3, 4, 5 e 6."
+        },
+        {
+          "id": "enade-2021-ed-01",
+          "year": 2021,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Média",
+          "statement": [
+            "Um sistema de consulta precisa localizar registros em um vetor ordenado que armazena 1.048.576 chaves distintas. A equipe optou pela busca binária, que a cada passo compara a chave procurada com o elemento central da faixa de busca e descarta metade dos candidatos.",
+            "Considere que o vetor esteja perfeitamente balanceado e que cada comparação tenha custo constante. Uma análise assintótica do algoritmo mostra que o número de comparações cresce de forma logarítmica em relação ao tamanho da entrada."
+          ],
+          "command": "Qual é o número máximo de comparações realizadas pela busca binária no pior caso para esse vetor?",
+          "alternatives": [
+            { "letter": "A", "text": "20 comparações, pois 2²⁰ = 1.048.576." },
+            { "letter": "B", "text": "1.048.576 comparações, pois o pior caso percorre todo o vetor." },
+            { "letter": "C", "text": "10 comparações, pois o vetor é dividido em dez faixas fixas." },
+            { "letter": "D", "text": "40 comparações, pois cada nível da árvore exige duas comparações." },
+            { "letter": "E", "text": "524.288 comparações, pois apenas metade do vetor é examinada." }
+          ],
+          "correctIndex": 0,
+          "explanation": "A busca binária reduz o espaço de busca à metade a cada comparação. O número máximo de comparações é ⌈log₂ n⌉. Como n = 2²⁰ = 1.048.576, o pior caso realiza 20 comparações — exatamente a altura da árvore de decisão balanceada que representa o algoritmo."
+        },
+        {
+          "id": "enade-2019-ed-01",
+          "year": 2019,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Um interpretador avalia expressões aritméticas escritas em Notação Polonesa Reversa (pós-fixa) utilizando uma estrutura de dados Pilha (LIFO). Ao ler um operando numérico, o algoritmo o empilha (push); ao ler um operador binário, desempilha (pop) os dois operandos do topo, aplica a operação e empilha o resultado."
+          ],
+          "supportBlock": {
+            "title": "Expressão em notação pós-fixa",
+            "language": "Texto",
+            "content": "5  3  +  2  *  4  -"
+          },
+          "command": "Qual é o valor numérico final que restará no topo da pilha após a avaliação completa da expressão?",
+          "alternatives": [
+            { "letter": "A", "text": "16" },
+            { "letter": "B", "text": "12" },
+            { "letter": "C", "text": "7" },
+            { "letter": "D", "text": "14" },
+            { "letter": "E", "text": "20" }
+          ],
+          "correctIndex": 1,
+          "explanation": "Passo a passo: empilha 5 e 3 → [5, 3]; lê '+': desempilha 3 e 5, calcula 5 + 3 = 8 e empilha → [8]; empilha 2 → [8, 2]; lê '*': calcula 8 * 2 = 16 e empilha → [16]; empilha 4 → [16, 4]; lê '-': calcula 16 - 4 = 12 e empilha → [12]."
+        },
+        {
+          "id": "enade-2017-ed-01",
+          "year": 2017,
+          "courseArea": "Sistemas de Computação",
+          "difficulty": "Fácil",
+          "statement": [
+            "Considere uma Árvore Binária de Busca (BST) construída pela inserção sequencial das chaves 50, 30, 70, 20, 40, 60 e 80.",
+            "Os algoritmos clássicos de percurso em profundidade visitam os nós em Pré-Ordem (Raiz, Esquerda, Direita), Em-Ordem / Simétrica (Esquerda, Raiz, Direita) e Pós-Ordem (Esquerda, Direita, Raiz)."
+          ],
+          "command": "Qual sequência de chaves é impressa ao executar o percurso Em-Ordem (In-Order) e qual propriedade fundamental ele possui em qualquer Árvore Binária de Busca?",
+          "alternatives": [
+            { "letter": "A", "text": "20, 30, 40, 50, 60, 70, 80; o percurso Em-Ordem em uma BST visita todas as chaves em ordem crescente." },
+            { "letter": "B", "text": "50, 30, 20, 40, 70, 60, 80; o percurso Em-Ordem sempre visita a raiz por último." },
+            { "letter": "C", "text": "20, 40, 30, 60, 80, 70, 50; o percurso Em-Ordem percorre a árvore nível por nível (em largura)." },
+            { "letter": "D", "text": "80, 70, 60, 50, 40, 30, 20; o percurso Em-Ordem remove os nós folhas durante a visita." },
+            { "letter": "E", "text": "50, 30, 70, 20, 40, 60, 80; o percurso Em-Ordem exige uma fila FIFO auxiliar." }
+          ],
+          "correctIndex": 0,
+          "explanation": "Em qualquer Árvore Binária de Busca (BST), todos os elementos da subárvore esquerda são menores que a raiz e todos os da subárvore direita são maiores. Por isso, o percurso Em-Ordem (Esquerda → Raiz → Direita) visita as chaves em ordem estritamente não decrescente: 20, 30, 40, 50, 60, 70, 80."
+        }
+      ]
+    }
+  ]
+}
