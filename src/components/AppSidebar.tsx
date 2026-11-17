@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { AppView } from "./Header";
 import type { SimuladoNavigationContext } from "../types/question";
-import { availableYears } from "../data/areas";
+import { availableYears, yearQuestionsCount } from "../data/areas";
 import { cn } from "../lib/utils";
 
 interface AppSidebarProps {
@@ -213,8 +213,24 @@ export function AppSidebar({
               >
                 {expanded ? (
                   <>
-                    <FileText className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                    <FileText
+                      className={cn(
+                        "h-3.5 w-3.5 shrink-0",
+                        isSelectedYear ? "text-slate-300" : "text-slate-400",
+                      )}
+                      aria-hidden="true"
+                    />
                     <span className="truncate">ENADE {year}</span>
+                    <span
+                      className={cn(
+                        "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                        isSelectedYear
+                          ? "bg-white/15 text-white"
+                          : "bg-slate-100 text-slate-500",
+                      )}
+                    >
+                      {yearQuestionsCount[year] ?? 0}
+                    </span>
                   </>
                 ) : (
                   <span className="font-mono text-[11px] font-bold tabular-nums">
