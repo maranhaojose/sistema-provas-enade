@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AnswerMap, Question, QuestionStatus } from "../types/question";
 
 export interface SimuladoStats {
@@ -31,10 +31,17 @@ export interface UseSimuladoResult {
 
 export function useSimulado(questions: readonly Question[]): UseSimuladoResult {
   const [currentIndex, setCurrentIndex] = useState(0);
-  // Guarda apenas seleções ainda não confirmadas; a confirmação vive no mesmo mapa.
+  // Guarda seleções e confirmações indexadas pelo id da questão.
   const [answers, setAnswers] = useState<AnswerMap>({});
 
-  const currentQuestion = questions[currentIndex];
+  // Ao trocar de caderno (ex.: mudar de ano do ENADE ou de disciplina), volta para a 1ª questão.
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [questions]);
+
+  const safeIndex =
+    questions.length > 0 ? Math.min(currentIndex, questions.length - 1) : 0;
+  const currentQuestion = questions[safeIndex];
 
   const currentSelection = useMemo(() => {
     if (!currentQuestion) return null;
@@ -48,15 +55,15 @@ export function useSimulado(questions: readonly Question[]): UseSimuladoResult {
   }, [answers, currentQuestion]);
 
   const stats = useMemo<SimuladoStats>(() => {
-    const confirmedAnswers = Object.values(answers).filter((answer) => answer.confirmed);
-    const correct = confirmedAnswers.reduce((total, answer) => {
-      const question = questions.find((item) => item.id === answer.questionId);
-      if (!question) return total;
+    const confirmedQuestions = questions.filter((q) => answers[q.id]?.confirmed);
+    const correct = confirmedQuestions.reduce((total, question) => {
+      const answer = answers[question.id];
+      if (!answer) return total;
       return total + (answer.selectedIndex === question.correctIndex ? 1 : 0);
     }, 0);
 
     const total = questions.length;
-    const answered = confirmedAnswers.length;
+    const answered = confirmedQuestions.length;
 
     return {
       total,
@@ -110,7 +117,7 @@ export function useSimulado(questions: readonly Question[]): UseSimuladoResult {
   );
 
   const goToNext = useCallback(() => {
-    setCurrentIndex((index) => Math.min(index + 1, questions.length - 1));
+    setCurrentIndex((index) => Math.min(index + 1, Math.max(0, questions.length - 1)));
   }, [questions.length]);
 
   const goToPrevious = useCallback(() => {
@@ -130,20 +137,26 @@ export function useSimulado(questions: readonly Question[]): UseSimuladoResult {
       if (answer?.confirmed) {
         return answer.selectedIndex === question.correctIndex ? "correct" : "incorrect";
       }
-      return questionIndex === currentIndex ? "current" : "unanswered";
+      return questionIndex === safeIndex ? "current" : "unanswered";
     },
-    [answers, currentIndex, questions],
+    [answers, safeIndex, questions],
   );
 
-  const currentStatus = getStatus(currentIndex);
+  const currentStatus = getStatus(safeIndex);
 
   const restart = useCallback(() => {
-    setAnswers({});
+    setAnswers((previous) => {
+      const next = { ...previous };
+      for (const q of questions) {
+        delete next[q.id];
+      }
+      return next;
+    });
     setCurrentIndex(0);
-  }, []);
+  }, [questions]);
 
   return {
-    currentIndex,
+    currentIndex: safeIndex,
     currentQuestion,
     answers,
     stats,
