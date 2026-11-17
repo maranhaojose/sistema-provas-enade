@@ -75,3 +75,49 @@ export interface ExamMeta {
   readonly totalQuestions: number;
   readonly durationMinutes: number;
 }
+
+/** Macroáreas para filtragem rápida no Dashboard (estilo QConcursos). */
+export type AreaCategory =
+  | "Todas as Áreas"
+  | "Fundamentos"
+  | "Desenvolvimento"
+  | "Infraestrutura"
+  | "Matemática e Teoria";
+
+/** Status de estudo do aluno em determinada disciplina. */
+export type StudyStatus = "Em andamento" | "Alta incidência" | "Recomendado" | "Não iniciado";
+
+/** Representa um card de área/disciplina na página inicial. */
+export interface StudyArea {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly category: Exclude<AreaCategory, "Todas as Áreas">;
+  readonly description: string;
+  readonly subtopics: readonly string[];
+  readonly totalQuestions: number;
+  readonly answeredQuestions: number;
+  readonly accuracyPercent: number;
+  readonly defaultDifficulty: Difficulty;
+  readonly years: readonly number[];
+  readonly status: StudyStatus;
+  readonly iconName:
+    | "Code2"
+    | "Database"
+    | "GitFork"
+    | "Network"
+    | "Terminal"
+    | "Cpu"
+    | "BrainCircuit"
+    | "Layers";
+}
+
+/** Contexto passado ao redirecionar do Dashboard para a resolução de questões. */
+export interface SimuladoNavigationContext {
+  readonly areaSlug?: string;
+  readonly areaTitle?: string;
+  readonly searchQuery?: string;
+  readonly category?: AreaCategory;
+  readonly difficulty?: Difficulty | "Todas";
+  readonly year?: number | "Todos";
+}
