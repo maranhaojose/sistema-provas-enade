@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Clock3, FolderKanban, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Clock3, FolderKanban, RotateCcw, ShieldCheck } from "lucide-react";
 import { Header, type AppView } from "./components/Header";
 import { AppSidebar } from "./components/AppSidebar";
 import { Dashboard } from "./components/Dashboard";
@@ -8,8 +8,9 @@ import { QuestionSidebar } from "./components/QuestionSidebar";
 import { QuestionCard } from "./components/QuestionCard";
 import { ResultsModal } from "./components/ResultsModal";
 import { useSimulado } from "./hooks/useSimulado";
-import { examMeta, questions, student } from "./data/questions";
-import { studyAreas } from "./data/areas";
+import { examMeta, filterQuestionsByContext, questions, student } from "./data/questions";
+import { availableYears, studyAreas } from "./data/areas";
+import { cn } from "./lib/utils";
 import type { SimuladoNavigationContext } from "./types/question";
 
 function readInitialRouteFromUrl(): {
@@ -32,7 +33,7 @@ function readInitialRouteFromUrl(): {
     return {
       view: "simulado",
       context: {
-        areaSlug,
+        areaSlug: areaSlug ?? (parsedYear ? `enade-${parsedYear}` : "simulado-geral"),
         year: parsedYear,
         areaTitle:
           matchedArea?.title ??
@@ -40,7 +41,7 @@ function readInitialRouteFromUrl(): {
             ? `Prova ENADE ${parsedYear} · Todas as Questões`
             : searchQuery
               ? `Busca: "${searchQuery}"`
-              : `${examMeta.title} ${examMeta.year}`),
+              : `${examMeta.title} · Todas as Edições`),
         searchQuery,
       },
     };
@@ -50,6 +51,20 @@ function readInitialRouteFromUrl(): {
 }
 
 export default function App() {
+  const [routeState, setRouteState] = useState(readInitialRouteFromUrl);
+  const [isResultsOpen, setIsResultsOpen] = useState(false);
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  const activeView = routeState.view;
+  const navContext = routeState.context;
+
+  const activeQuestions = useMemo(
+    () => filterQuestionsByContext(questions, navContext),
+    [navContext],
+  );
+
   const {
     currentIndex,
     currentQuestion,
@@ -64,16 +79,7 @@ export default function App() {
     goToPrevious,
     getStatus,
     restart,
-  } = useSimulado(questions);
-
-  const [routeState, setRouteState] = useState(readInitialRouteFromUrl);
-  const [isResultsOpen, setIsResultsOpen] = useState(false);
-  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-
-  const activeView = routeState.view;
-  const navContext = routeState.context;
+  } = useSimulado(activeQuestions);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -85,25 +91,31 @@ export default function App() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [currentIndex, activeView]);
+  }, [currentIndex, activeView, navContext]);
 
   const handleNavigateToSimulado = useCallback((context?: SimuladoNavigationContext) => {
     const nextContext: SimuladoNavigationContext = context ?? {
       areaSlug: "simulado-geral",
-      areaTitle: `${examMeta.title} ${examMeta.year}`,
+      areaTitle: "Simulado Geral · Todas as Edições",
     };
 
     if (typeof window !== "undefined") {
       const params = new URLSearchParams();
+      if (
+        nextContext.areaSlug &&
+        nextContext.areaSlug !== "simulado-geral" &&
+        !nextContext.areaSlug.startsWith("enade-")
+      ) {
+        params.set("area", nextContext.areaSlug);
+      }
       if (typeof nextContext.year === "number") {
         params.set("ano", String(nextContext.year));
-      } else if (nextContext.areaSlug) {
-        params.set("area", nextContext.areaSlug);
-      } else {
-        params.set("view", "simulado");
       }
       if (nextContext.searchQuery) {
         params.set("q", nextContext.searchQuery);
+      }
+      if (!params.toString()) {
+        params.set("view", "simulado");
       }
       const queryString = params.toString();
       const nextUrl = queryString
@@ -114,6 +126,43 @@ export default function App() {
 
     setRouteState({ view: "simulado", context: nextContext });
   }, []);
+
+  const handleFilterYearInSimulado = useCallback(
+    (year?: number) => {
+      const isSpecificTheme =
+        Boolean(navContext?.areaSlug) &&
+        navContext?.areaSlug !== "simulado-geral" &&
+        !navContext?.areaSlug?.startsWith("enade-");
+
+      if (isSpecificTheme && navContext?.areaSlug) {
+        const matchedArea = studyAreas.find((a) => a.slug === navContext.areaSlug);
+        handleNavigateToSimulado({
+          ...navContext,
+          year,
+          areaTitle: matchedArea
+            ? year
+              ? `${matchedArea.title} · ENADE ${year}`
+              : matchedArea.title
+            : navContext.areaTitle,
+        });
+        return;
+      }
+
+      if (year) {
+        handleNavigateToSimulado({
+          areaSlug: `enade-${year}`,
+          areaTitle: `Prova ENADE ${year} · Todas as Questões`,
+          year,
+        });
+      } else {
+        handleNavigateToSimulado({
+          areaSlug: "simulado-geral",
+          areaTitle: "Simulado Geral · Todas as Edições",
+        });
+      }
+    },
+    [handleNavigateToSimulado, navContext],
+  );
 
   const handleNavigateHome = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -161,11 +210,11 @@ export default function App() {
         />
 
         {activeView === "dashboard" ? (
-          <Dashboard onStartSimulado={handleNavigateToSimulado} />
+          <Dashboard answers={answers} onStartSimulado={handleNavigateToSimulado} />
         ) : (
           <main className="mx-auto w-full max-w-[1360px] px-4 pb-16 pt-5 sm:px-6">
-            {/* Linha de contexto e retorno */}
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            {/* Linha de contexto, filtro rápido por ano e retorno */}
+            <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
@@ -183,61 +232,127 @@ export default function App() {
                     </h1>
                     <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-bold text-brand-700 ring-1 ring-inset ring-brand-100">
                       <FolderKanban className="h-3 w-3" aria-hidden="true" />
-                      {typeof navContext?.year === "number"
-                        ? `Edição ${navContext.year}`
-                        : "Caderno ativo"}
+                      {activeQuestions.length}{" "}
+                      {activeQuestions.length === 1 ? "questão" : "questões"}
                     </span>
                   </div>
                   <p className="mt-0.5 text-xs font-medium text-slate-500">
                     {examMeta.title} · {examMeta.course}
-                    {navContext?.searchQuery ? ` · Filtro: "${navContext.searchQuery}"` : ""}
+                    {typeof navContext?.year === "number" ? ` · Edição ${navContext.year}` : ""}
+                    {navContext?.searchQuery ? ` · Busca: "${navContext.searchQuery}"` : ""}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-400">
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-                  {examMeta.durationMinutes} minutos
-                </span>
-                <span className="hidden items-center gap-1.5 sm:inline-flex">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
-                  Respostas salvas automaticamente
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
+                {/* Filtro rápido de ano dentro do Simulado */}
+                <div
+                  className="flex flex-wrap items-center gap-1"
+                  role="group"
+                  aria-label="Filtrar questões por ano do ENADE"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleFilterYearInSimulado(undefined)}
+                    className={cn(
+                      "rounded-lg px-2.5 py-1 text-[11px] font-bold transition",
+                      typeof navContext?.year !== "number"
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900",
+                    )}
+                  >
+                    Todos os anos
+                  </button>
+                  {availableYears.map((year) => {
+                    const isSelected = navContext?.year === year;
+                    return (
+                      <button
+                        key={year}
+                        type="button"
+                        onClick={() => handleFilterYearInSimulado(year)}
+                        className={cn(
+                          "rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums transition",
+                          isSelected
+                            ? "bg-brand-600 text-white shadow-sm"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900",
+                        )}
+                      >
+                        {year}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="hidden items-center gap-3 border-l border-slate-200 pl-3 text-[11px] font-semibold text-slate-400 xl:flex">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+                    {examMeta.durationMinutes} min
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
+                    Salvo automaticamente
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[290px_minmax(0,1fr)] lg:gap-6">
-              <div className="order-1 lg:sticky lg:top-[84px]">
-                <QuestionSidebar
-                  questions={questions}
-                  currentIndex={currentIndex}
-                  stats={stats}
-                  getStatus={getStatus}
-                  onSelect={goToQuestion}
-                  onOpenResults={() => setIsResultsOpen(true)}
-                />
+            {activeQuestions.length > 0 && currentQuestion ? (
+              <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[290px_minmax(0,1fr)] lg:gap-6">
+                <div className="order-1 lg:sticky lg:top-[84px]">
+                  <QuestionSidebar
+                    questions={activeQuestions}
+                    currentIndex={currentIndex}
+                    stats={stats}
+                    getStatus={getStatus}
+                    onSelect={goToQuestion}
+                    onOpenResults={() => setIsResultsOpen(true)}
+                  />
+                </div>
+
+                <div className="order-2 min-w-0">
+                  <QuestionCard
+                    question={currentQuestion}
+                    index={currentIndex}
+                    total={activeQuestions.length}
+                    selection={currentSelection}
+                    isConfirmed={isCurrentConfirmed}
+                    onSelect={selectAlternative}
+                    onConfirm={confirmAnswer}
+                    onNext={goToNext}
+                    onPrevious={goToPrevious}
+                  />
+
+                  <p className="mt-4 px-1 text-center text-[11px] font-medium text-slate-400 lg:text-left">
+                    Questões comentadas elaboradas a partir de provas oficiais do ENADE. Use as setas
+                    ou a navegação lateral para revisar antes de finalizar.
+                  </p>
+                </div>
               </div>
-
-              <div className="order-2 min-w-0">
-                <QuestionCard
-                  question={currentQuestion}
-                  index={currentIndex}
-                  total={questions.length}
-                  selection={currentSelection}
-                  isConfirmed={isCurrentConfirmed}
-                  onSelect={selectAlternative}
-                  onConfirm={confirmAnswer}
-                  onNext={goToNext}
-                  onPrevious={goToPrevious}
-                />
-
-                <p className="mt-4 px-1 text-center text-[11px] font-medium text-slate-400 lg:text-left">
-                  Questões comentadas elaboradas a partir de provas oficiais do ENADE. Use as setas
-                  ou a navegação lateral para revisar antes de finalizar.
+            ) : (
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-8 text-center shadow-card">
+                <p className="text-base font-bold text-slate-900">
+                  Nenhuma questão encontrada para o filtro selecionado
                 </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Experimente remover o filtro de busca ou selecionar todas as edições do ENADE.
+                </p>
+                <div className="mt-4 flex justify-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleNavigateToSimulado({
+                        areaSlug: "simulado-geral",
+                        areaTitle: "Simulado Geral · Todas as Edições",
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                    Ver todas as {questions.length} questões
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </main>
         )}
       </div>
@@ -255,7 +370,7 @@ export default function App() {
       <ResultsModal
         isOpen={isResultsOpen}
         stats={stats}
-        questions={questions}
+        questions={activeQuestions}
         answers={answers}
         onClose={() => setIsResultsOpen(false)}
         onRestart={handleRestart}
