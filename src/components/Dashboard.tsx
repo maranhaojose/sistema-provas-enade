@@ -9,34 +9,49 @@ import {
   X,
 } from "lucide-react";
 import type {
+  AnswerMap,
   AreaCategory,
   SimuladoNavigationContext,
   StudyArea,
 } from "../types/question";
-import { areaCategories, availableYears, studyAreas } from "../data/areas";
+import {
+  areaCategories,
+  availableYears,
+  studyAreas,
+  yearQuestionsCount,
+} from "../data/areas";
+import { questions } from "../data/questions";
 import { cn } from "../lib/utils";
 import { AreaCard } from "./AreaCard";
 
 interface DashboardProps {
+  readonly answers?: AnswerMap;
   readonly onStartSimulado: (context?: SimuladoNavigationContext) => void;
 }
 
-const yearQuestionsCount: Readonly<Record<number, number>> = {
-  2023: 35,
-  2022: 35,
-  2021: 35,
-  2019: 35,
-  2017: 35,
-};
-
-export function Dashboard({ onStartSimulado }: DashboardProps) {
+export function Dashboard({ answers = {}, onStartSimulado }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<AreaCategory>("Todas as Áreas");
+
+  const areasWithLiveProgress = useMemo(() => {
+    return studyAreas.map((area) => {
+      const areaQuestions = questions.filter((q) => q.areaSlug === area.slug);
+      const sessionAnswered = areaQuestions.filter((q) => answers[q.id]?.confirmed).length;
+      const answeredQuestions = Math.min(
+        area.totalQuestions,
+        area.answeredQuestions + sessionAnswered,
+      );
+      return {
+        ...area,
+        answeredQuestions,
+      };
+    });
+  }, [answers]);
 
   const filteredAreas = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    return studyAreas.filter((area) => {
+    return areasWithLiveProgress.filter((area) => {
       if (selectedCategory !== "Todas as Áreas" && area.category !== selectedCategory) {
         return false;
       }
@@ -52,7 +67,7 @@ export function Dashboard({ onStartSimulado }: DashboardProps) {
 
       return matchesTitle || matchesDescription || matchesCategory || matchesSubtopics;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [areasWithLiveProgress, searchQuery, selectedCategory]);
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -182,7 +197,7 @@ export function Dashboard({ onStartSimulado }: DashboardProps) {
                   ENADE {year}
                 </span>
                 <span className="mt-0.5 block text-[11px] font-medium text-slate-400">
-                  {yearQuestionsCount[year] ?? 35} questões
+                  {yearQuestionsCount[year] ?? 0} questões
                 </span>
               </div>
               <ArrowRight
@@ -208,7 +223,7 @@ export function Dashboard({ onStartSimulado }: DashboardProps) {
                 Simulado Geral
               </span>
               <span className="mt-0.5 block text-[11px] font-medium text-brand-100">
-                Todas as edições
+                {questions.length} questões · Todas as edições
               </span>
             </div>
             <ClipboardCheck className="h-4 w-4 shrink-0 text-brand-100" aria-hidden="true" />
