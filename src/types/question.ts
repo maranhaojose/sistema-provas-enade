@@ -26,6 +26,10 @@ export interface Alternative {
 
 export interface Question {
   readonly id: string;
+  /** Slug da área/tema correspondente no JSON, ex.: "banco-de-dados". */
+  readonly areaSlug?: string;
+  /** Macroárea da questão, ex.: "Desenvolvimento". */
+  readonly category?: Exclude<AreaCategory, "Todas as Áreas">;
   /** Edição da prova, ex.: 2023. */
   readonly year: number;
   /** Tema/disciplina, ex.: "Algoritmos e Estruturas de Dados". */
