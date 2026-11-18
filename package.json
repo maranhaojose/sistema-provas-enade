@@ -9,7 +9,7 @@
     "url": "https://github.com/maranhaojose/sistema-provas-enade.git"
   },
   "engines": {
-    "node": "20.x"
+    "node": "26.x"
   },
   "scripts": {
     "dev": "vite",
