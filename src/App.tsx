@@ -259,6 +259,7 @@ export default function App() {
         isMobileOpen={isMobileNavOpen}
         activeView={activeView}
         activeYear={navContext?.year}
+        activeAreaSlug={navContext?.areaSlug}
         onToggleExpand={() => setIsSidebarExpanded((value) => !value)}
         onCloseMobile={() => setIsMobileNavOpen(false)}
         onNavigateHome={handleNavigateHome}
