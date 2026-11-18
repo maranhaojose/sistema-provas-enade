@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Clock3, FolderKanban, RotateCcw, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock3,
+  FolderKanban,
+  GraduationCap,
+  LogIn,
+  RotateCcw,
+  ShieldCheck,
+} from "lucide-react";
 import { Header, type AppView } from "./components/Header";
 import { AppSidebar } from "./components/AppSidebar";
 import { Dashboard } from "./components/Dashboard";
@@ -7,11 +15,12 @@ import { MetricsModal } from "./components/MetricsModal";
 import { QuestionSidebar } from "./components/QuestionSidebar";
 import { QuestionCard } from "./components/QuestionCard";
 import { ResultsModal } from "./components/ResultsModal";
+import { UserProfileModal, type UserModalTab } from "./components/UserProfileModal";
 import { useSimulado } from "./hooks/useSimulado";
 import { examMeta, filterQuestionsByContext, questions, student } from "./data/questions";
 import { availableYears, studyAreas } from "./data/areas";
 import { cn } from "./lib/utils";
-import type { SimuladoNavigationContext } from "./types/question";
+import type { SimuladoNavigationContext, StudentProfile } from "./types/question";
 
 function readInitialRouteFromUrl(): {
   view: AppView;
@@ -52,8 +61,12 @@ function readInitialRouteFromUrl(): {
 
 export default function App() {
   const [routeState, setRouteState] = useState(readInitialRouteFromUrl);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile>(student);
   const [isResultsOpen, setIsResultsOpen] = useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [userModalTab, setUserModalTab] = useState<UserModalTab>("menu");
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -181,6 +194,63 @@ export default function App() {
     setIsResultsOpen(false);
   };
 
+  const handleOpenSettings = () => {
+    setUserModalTab("settings");
+    setIsUserModalOpen(true);
+  };
+
+  const handleLogout = () => {
+    setIsUserModalOpen(false);
+    setIsMetricsOpen(false);
+    setIsResultsOpen(false);
+    setIsMobileNavOpen(false);
+    setIsLoggedOut(true);
+  };
+
+  if (isLoggedOut) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
+        <div className="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-8 text-center shadow-card">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm shadow-brand-600/30">
+            <GraduationCap className="h-7 w-7" aria-hidden="true" />
+          </div>
+
+          <h1 className="mt-4 text-xl font-extrabold tracking-tight text-slate-900">
+            Você saiu do Simula<span className="text-brand-600">ENADE</span>
+          </h1>
+          <p className="mt-1.5 text-xs font-medium text-slate-500">
+            Sua sessão foi encerrada com segurança. Clique abaixo para acessar o sistema novamente.
+          </p>
+
+          <div className="mt-6 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 text-left">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
+                {studentProfile.initials}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-bold text-slate-900">
+                  {studentProfile.name}
+                </p>
+                <p className="truncate text-[11px] font-medium text-slate-500">
+                  {studentProfile.course} · {studentProfile.registration}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsLoggedOut(false)}
+            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-bold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:text-sm"
+          >
+            <LogIn className="h-4 w-4" aria-hidden="true" />
+            Entrar novamente no sistema
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50">
       {/* Navegação Lateral Expansível */}
@@ -200,13 +270,15 @@ export default function App() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Header
           exam={examMeta}
-          student={student}
+          student={studentProfile}
           stats={stats}
           activeView={activeView}
           activeAreaTitle={navContext?.areaTitle}
           onOpenResults={() => setIsResultsOpen(true)}
           onOpenMetrics={() => setIsMetricsOpen(true)}
           onOpenMobileNav={() => setIsMobileNavOpen(true)}
+          onOpenSettings={handleOpenSettings}
+          onLogout={handleLogout}
         />
 
         {activeView === "dashboard" ? (
@@ -360,7 +432,7 @@ export default function App() {
       {/* Popup de Métricas de Estudo */}
       <MetricsModal
         isOpen={isMetricsOpen}
-        student={student}
+        student={studentProfile}
         stats={stats}
         onClose={() => setIsMetricsOpen(false)}
         onStartSimulado={() => handleNavigateToSimulado()}
@@ -375,6 +447,16 @@ export default function App() {
         onClose={() => setIsResultsOpen(false)}
         onRestart={handleRestart}
         onReview={handleReview}
+      />
+
+      {/* Modal do Perfil (Configurações e Sair) */}
+      <UserProfileModal
+        isOpen={isUserModalOpen}
+        initialTab={userModalTab}
+        student={studentProfile}
+        onClose={() => setIsUserModalOpen(false)}
+        onUpdateStudent={setStudentProfile}
+        onLogout={handleLogout}
       />
     </div>
   );
