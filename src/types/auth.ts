@@ -1,4 +1,4 @@
-export type AuthRole = "student" | "admin";
+export type AuthRole = "student" | "professor" | "admin";
 
 export type AuthScreenStep = "select-role" | "student-login" | "admin-login";
 
