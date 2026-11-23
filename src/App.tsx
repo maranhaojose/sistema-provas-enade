@@ -7,6 +7,10 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { AccessPortalScreen } from "./components/AccessPortalScreen";
+import {
+  AdminManagementModal,
+  type AdminPanelTab,
+} from "./components/AdminManagementModal";
 import { AuthModal } from "./components/AuthModal";
 import { Header, type AppView } from "./components/Header";
 import { AppSidebar } from "./components/AppSidebar";
@@ -83,7 +87,7 @@ function readInitialRouteFromUrl(): {
 }
 
 function AppContent() {
-  const { user, isLoading: isAuthLoading, logout } = useAuth();
+  const { user, isLoading: isAuthLoading, logout, updateUser } = useAuth();
   const [authModalRole, setAuthModalRole] = useState<AppUser["role"] | null>(null);
   const [showLogoutNotice, setShowLogoutNotice] = useState(false);
   const [routeState, setRouteState] = useState(readInitialRouteFromUrl);
@@ -92,6 +96,7 @@ function AppContent() {
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userModalTab, setUserModalTab] = useState<UserModalTab>("menu");
+  const [adminPanelTab, setAdminPanelTab] = useState<AdminPanelTab | null>(null);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -233,16 +238,13 @@ function AppContent() {
     setAuthModalRole(AUTH_ROLE_TO_USER_ROLE[role]);
   };
 
-  const handleUpdateStudentProfile = (updated: StudentProfile) => {
-    setStudentProfile(updated);
-  };
-
   const handleLogout = () => {
     setIsUserModalOpen(false);
     setIsMetricsOpen(false);
     setIsResultsOpen(false);
     setIsMobileNavOpen(false);
     setAuthModalRole(null);
+    setAdminPanelTab(null);
     logout();
     setShowLogoutNotice(true);
   };
@@ -281,18 +283,20 @@ function AppContent() {
         activeView={activeView}
         activeYear={navContext?.year}
         activeAreaSlug={navContext?.areaSlug}
-        userRole={user.role}
+        user={user}
         onToggleExpand={() => setIsSidebarExpanded((value) => !value)}
         onCloseMobile={() => setIsMobileNavOpen(false)}
         onNavigateHome={handleNavigateHome}
         onStartSimulado={handleNavigateToSimulado}
         onOpenMetrics={() => setIsMetricsOpen(true)}
+        onOpenAdminPanel={(tab) => setAdminPanelTab(tab)}
       />
 
       {/* Área Principal (Header limpo + Conteúdo) */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Header
           exam={examMeta}
+          user={user}
           student={studentProfile}
           stats={stats}
           activeView={activeView}
@@ -476,10 +480,17 @@ function AppContent() {
       <UserProfileModal
         isOpen={isUserModalOpen}
         initialTab={userModalTab}
-        student={studentProfile}
+        user={user}
         onClose={() => setIsUserModalOpen(false)}
-        onUpdateStudent={handleUpdateStudentProfile}
+        onUpdateUser={updateUser}
         onLogout={handleLogout}
+      />
+
+      {/* Painel Administrativo (aprovação de docentes e gestão de contas) */}
+      <AdminManagementModal
+        isOpen={adminPanelTab !== null}
+        initialTab={adminPanelTab ?? "professors"}
+        onClose={() => setAdminPanelTab(null)}
       />
     </div>
   );
