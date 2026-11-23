@@ -8,14 +8,55 @@ import {
   Settings,
   Trophy,
 } from "lucide-react";
+import type { AppUser } from "../types/user";
 import type { ExamMeta, StudentProfile } from "../types/question";
 import type { SimuladoStats } from "../hooks/useSimulado";
 import { cn } from "../lib/utils";
 
 export type AppView = "dashboard" | "simulado";
 
+function getRoleCaption(user: AppUser): string {
+  switch (user.role) {
+    case "STUDENT":
+      return user.registration;
+    case "PROFESSOR":
+      return user.department;
+    case "ADMIN":
+      return user.sector;
+  }
+}
+
+function getRoleBadge(user: AppUser): { label: string; className: string } {
+  switch (user.role) {
+    case "STUDENT":
+      return {
+        label: "Aluno",
+        className: "bg-brand-50 text-brand-700 ring-brand-100",
+      };
+    case "PROFESSOR":
+      return user.isVerified
+        ? {
+            label: "Professor",
+            className: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+          }
+        : {
+            label: "Professor · aguardando validação",
+            className: "bg-amber-50 text-amber-700 ring-amber-200",
+          };
+    case "ADMIN":
+      return {
+        label:
+          user.accessLevel === "SUPER_ADMIN"
+            ? "Administração · Super Admin"
+            : "Administração · Coordenação",
+        className: "bg-slate-900 text-white ring-slate-900",
+      };
+  }
+}
+
 interface HeaderProps {
   readonly exam: ExamMeta;
+  readonly user: AppUser;
   readonly student: StudentProfile;
   readonly stats: SimuladoStats;
   readonly activeView?: AppView;
@@ -29,6 +70,7 @@ interface HeaderProps {
 
 export function Header({
   exam,
+  user,
   student,
   stats,
   activeView = "simulado",
@@ -40,6 +82,7 @@ export function Header({
   onLogout,
 }: HeaderProps) {
   const isDashboard = activeView === "dashboard";
+  const roleBadge = getRoleBadge(user);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
@@ -91,6 +134,14 @@ export function Header({
               </p>
               <span className="hidden rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-700 ring-1 ring-inset ring-brand-100 sm:inline">
                 {exam.course}
+              </span>
+              <span
+                className={cn(
+                  "hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ring-inset md:inline",
+                  roleBadge.className,
+                )}
+              >
+                {roleBadge.label}
               </span>
             </div>
             <p className="truncate text-[11px] font-medium text-slate-400">
@@ -149,7 +200,7 @@ export function Header({
               onClick={() => setIsMenuOpen((prev) => !prev)}
               aria-expanded={isMenuOpen}
               aria-haspopup="true"
-              aria-label={`Abrir menu de ${student.name}`}
+              aria-label={`Abrir menu de ${user.name}`}
               className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-2.5 transition hover:border-slate-300 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 lg:hidden"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-[11px] font-bold text-white">
@@ -178,9 +229,11 @@ export function Header({
             >
               <div className="text-right">
                 <p className="max-w-[150px] truncate text-xs font-bold text-slate-800 group-hover:text-brand-700">
-                  {student.name}
+                  {user.name}
                 </p>
-                <p className="text-[11px] font-medium text-slate-400">{student.registration}</p>
+                <p className="max-w-[150px] truncate text-[11px] font-medium text-slate-400">
+                  {getRoleCaption(user)}
+                </p>
               </div>
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-[11px] font-bold text-white shadow-sm ring-2 ring-white transition group-hover:from-brand-600 group-hover:to-brand-800">
                 {student.initials}
@@ -201,10 +254,18 @@ export function Header({
               className={cn(
                 "absolute right-0 top-full z-50 mt-2 w-48 origin-top overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-xl transition-all duration-200 ease-out",
                 isMenuOpen
-                  ? "max-h-48 translate-y-0 opacity-100"
+                  ? "max-h-72 translate-y-0 opacity-100"
                   : "pointer-events-none max-h-0 -translate-y-1 border-transparent opacity-0",
               )}
             >
+              <div className="border-b border-slate-100 px-3 py-2.5">
+                <p className="truncate text-xs font-bold text-slate-800">{user.name}</p>
+                <p className="truncate text-[11px] text-slate-400">{user.email}</p>
+                <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-brand-700">
+                  {roleBadge.label}
+                </p>
+              </div>
+
               {/* Itens: Configurações e Sair */}
               <div className="p-1.5 space-y-0.5">
                 <button
