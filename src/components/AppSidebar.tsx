@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AlertCircle,
   BarChart3,
   BookOpen,
   BrainCircuit,
@@ -16,10 +17,16 @@ import {
   Network,
   PanelLeftClose,
   PanelLeftOpen,
+  ShieldCheck,
   Terminal,
+  UserCheck,
+  Users,
   X,
+  type LucideIcon,
 } from "lucide-react";
+import type { AdminPanelTab } from "./AdminManagementModal";
 import type { AppView } from "./Header";
+import { RoleGuard } from "./RoleGuard";
 import type { AppUser } from "../types/user";
 import type { SimuladoNavigationContext, StudyArea } from "../types/question";
 import { availableYears, studyAreas, yearQuestionsCount } from "../data/areas";
@@ -42,12 +49,13 @@ interface AppSidebarProps {
   readonly activeView: AppView;
   readonly activeYear?: number | "Todos";
   readonly activeAreaSlug?: string;
-  readonly userRole?: AppUser["role"];
+  readonly user: AppUser;
   readonly onToggleExpand: () => void;
   readonly onCloseMobile: () => void;
   readonly onNavigateHome: () => void;
   readonly onStartSimulado: (context?: SimuladoNavigationContext) => void;
   readonly onOpenMetrics: () => void;
+  readonly onOpenAdminPanel: (tab: AdminPanelTab) => void;
 }
 
 export function AppSidebar({
@@ -56,12 +64,13 @@ export function AppSidebar({
   activeView,
   activeYear,
   activeAreaSlug,
-  userRole,
+  user,
   onToggleExpand,
   onCloseMobile,
   onNavigateHome,
   onStartSimulado,
   onOpenMetrics,
+  onOpenAdminPanel,
 }: AppSidebarProps) {
   const [isDisciplinasOpen, setIsDisciplinasOpen] = useState(false);
   const [isYearsOpen, setIsYearsOpen] = useState(false);
@@ -98,6 +107,31 @@ export function AppSidebar({
     }
     setIsYearsOpen((prev) => !prev);
   };
+
+  const renderRoleAction = (
+    expanded: boolean,
+    Icon: LucideIcon,
+    label: string,
+    onClick: () => void,
+    options: { disabled?: boolean; title?: string } = {},
+  ) => (
+    <button
+      type="button"
+      onClick={() => handleAction(onClick)}
+      disabled={options.disabled}
+      title={options.title ?? label}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all",
+        !expanded && "justify-center px-0",
+        options.disabled
+          ? "cursor-not-allowed text-slate-400"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+      {expanded && <span className="truncate">{label}</span>}
+    </button>
+  );
 
   const isGeneralSimulado =
     activeView === "simulado" &&
@@ -146,19 +180,23 @@ export function AppSidebar({
           )}
         </button>
 
-        {expanded && userRole && (
+        {expanded && (
           <span
             className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset ${
-              userRole === "ADMIN"
+              user.role === "ADMIN"
                 ? "bg-slate-100 text-slate-700 ring-slate-200"
-                : userRole === "PROFESSOR"
-                  ? "bg-indigo-50 text-indigo-700 ring-indigo-100"
+                : user.role === "PROFESSOR"
+                  ? user.isVerified
+                    ? "bg-indigo-50 text-indigo-700 ring-indigo-100"
+                    : "bg-amber-50 text-amber-700 ring-amber-200"
                   : "bg-brand-50 text-brand-700 ring-brand-100"
             }`}
           >
-            {userRole === "ADMIN"
-              ? "Administrador"
-              : userRole === "PROFESSOR"
+            {user.role === "ADMIN"
+              ? user.accessLevel === "SUPER_ADMIN"
+                ? "Super Admin"
+                : "Administração"
+              : user.role === "PROFESSOR"
                 ? "Professor"
                 : "Aluno"}
           </span>
@@ -451,6 +489,56 @@ export function AppSidebar({
             )}
           </div>
         </nav>
+
+        <RoleGuard allowedRoles={["PROFESSOR", "ADMIN"]}>
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            {expanded && (
+              <p className="mb-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Área Docente
+              </p>
+            )}
+            <div className="space-y-1">
+              {renderRoleAction(expanded, FileText, "Minhas questões", () => undefined, {
+                disabled: true,
+                title: "Em breve: acervo de questões do docente",
+              })}
+              <RoleGuard allowedRoles={["PROFESSOR", "ADMIN"]} requireVerifiedProfessor>
+                {renderRoleAction(expanded, ShieldCheck, "Publicar questão", () => undefined, {
+                  disabled: true,
+                  title: "Em breve: autoria de questões",
+                })}
+              </RoleGuard>
+              {user.role === "PROFESSOR" && !user.isVerified && expanded && (
+                <p className="mx-1 mt-1.5 flex items-start gap-1.5 rounded-xl bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  Cadastro aguardando validação da Administração.
+                </p>
+              )}
+            </div>
+          </div>
+        </RoleGuard>
+
+        <RoleGuard allowedRoles={["ADMIN"]}>
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            {expanded && (
+              <p className="mb-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Administração
+              </p>
+            )}
+            <div className="space-y-1">
+              {renderRoleAction(expanded, UserCheck, "Aprovar professores", () =>
+                onOpenAdminPanel("professors"),
+              )}
+              {renderRoleAction(expanded, Users, "Gerenciar contas", () =>
+                onOpenAdminPanel("users"),
+              )}
+              {user.role === "ADMIN" && user.accessLevel === "SUPER_ADMIN" &&
+                renderRoleAction(expanded, ShieldCheck, "Novo administrador", () =>
+                  onOpenAdminPanel("create-admin"),
+                )}
+            </div>
+          </div>
+        </RoleGuard>
       </div>
     </div>
   );
