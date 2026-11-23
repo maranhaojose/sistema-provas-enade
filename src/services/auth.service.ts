@@ -32,11 +32,12 @@ interface AuthResponse {
   user: RawUser;
 }
 
-interface RawUser {
+export interface RawUser {
   id: string;
   name: string;
   email: string;
   initials: string;
+  profileId?: string;
   role: AppUser["role"];
   isActive: boolean;
   registration?: string;
@@ -65,13 +66,14 @@ export class AuthError extends Error {
   }
 }
 
-function normalizeUser(raw: RawUser): AppUser {
+export function normalizeUser(raw: RawUser): AppUser {
   const base = {
     id: raw.id,
     name: raw.name,
     email: raw.email,
     initials: raw.initials,
     isActive: raw.isActive,
+    profileId: raw.profileId ?? "",
   };
 
   switch (raw.role) {
@@ -123,7 +125,7 @@ function storeToken(token: string): void {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -165,7 +167,7 @@ export const authService = {
   },
 
   async login(email: string, password: string): Promise<Session> {
-    const response = await request<AuthResponse>("/auth/login", {
+    const response = await apiRequest<AuthResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
@@ -173,7 +175,7 @@ export const authService = {
   },
 
   async registerStudent(payload: RegisterStudentPayload): Promise<Session> {
-    const response = await request<AuthResponse>("/auth/register/student", {
+    const response = await apiRequest<AuthResponse>("/auth/register/student", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -181,7 +183,7 @@ export const authService = {
   },
 
   async registerProfessor(payload: RegisterProfessorPayload): Promise<Session> {
-    const response = await request<AuthResponse>("/auth/register/professor", {
+    const response = await apiRequest<AuthResponse>("/auth/register/professor", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -189,7 +191,7 @@ export const authService = {
   },
 
   async getMe(): Promise<AppUser> {
-    const response = await request<{ user: RawUser }>("/auth/me");
+    const response = await apiRequest<{ user: RawUser }>("/auth/me");
     return normalizeUser(response.user);
   },
 };
