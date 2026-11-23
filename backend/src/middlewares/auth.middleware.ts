@@ -1,20 +1,24 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import type { UserRole } from "@prisma/client";
+import { UserRole, type AdminAccessLevel } from "@prisma/client";
+import { prisma } from "../lib/prisma.js";
 
-export interface AuthTokenPayload {
+export interface JwtUserPayload {
   sub: string;
   email: string;
   role: UserRole;
+  profileId: string;
+  isVerified?: boolean;
+  accessLevel?: AdminAccessLevel;
 }
 
 declare module "@fastify/jwt" {
   interface FastifyJWT {
-    payload: AuthTokenPayload;
-    user: AuthTokenPayload;
+    payload: JwtUserPayload;
+    user: JwtUserPayload;
   }
 }
 
-/** Verifica o JWT e popula `request.user` com os dados da sessão. */
+/** Verifica o JWT, popula `request.user` e garante que a conta ainda está ativa. */
 export async function authenticate(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -25,6 +29,19 @@ export async function authenticate(
     reply.status(401).send({
       error: "Unauthorized",
       message: "Token de autenticação ausente, inválido ou expirado.",
+    });
+    return;
+  }
+
+  const isActive = await prisma.user.findUnique({
+    where: { id: request.user.sub },
+    select: { isActive: true },
+  });
+
+  if (!isActive?.isActive) {
+    reply.status(401).send({
+      error: "Unauthorized",
+      message: "Esta conta foi desativada. Procure a administração do sistema.",
     });
   }
 }
