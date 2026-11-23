@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   GraduationCap,
   ShieldCheck,
+  Users,
   Sparkles,
 } from "lucide-react";
 import type { AuthRole } from "../types/auth";
@@ -80,7 +81,7 @@ export function AccessPortalScreen({
         {/* Cards de Seleção: Aluno vs Admin */}
         <section
           aria-label="Seleção de perfil de acesso"
-          className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2"
+          className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3"
         >
           {/* Card: Aluno */}
           <button
@@ -124,6 +125,55 @@ export function AccessPortalScreen({
 
             <div className="mt-6 flex items-center justify-between rounded-xl bg-brand-600 px-4 py-3 text-xs font-bold text-white shadow-sm shadow-brand-600/25 transition group-hover:bg-brand-700 sm:text-sm">
               <span>Continuar como Aluno</span>
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                aria-hidden="true"
+              />
+            </div>
+          </button>
+
+          {/* Card: Professor */}
+          <button
+            type="button"
+            onClick={() => onSelectRole("professor")}
+            className="group relative flex flex-col justify-between rounded-3xl border border-slate-200/80 bg-white p-6 text-left shadow-card transition-all duration-200 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-card-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 sm:p-7"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-sm shadow-indigo-600/25 transition-transform duration-200 group-hover:scale-105">
+                  <Users className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <span className="rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-100">
+                  Corpo Docente
+                </span>
+              </div>
+
+              <h2 className="mt-5 text-lg font-extrabold tracking-tight text-slate-900 group-hover:text-indigo-700">
+                Entrar como Professor
+              </h2>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-500 sm:text-sm">
+                Autorie e revise questões, acompanhe o desempenho das turmas e monte listas de
+                estudos para suas disciplinas.
+              </p>
+
+              <ul className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-xs font-medium text-slate-600">
+                <li className="flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
+                  <span>Autoria e revisão de questões</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <BookOpenCheck className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
+                  <span>Listas por turma e disciplina</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
+                  <span>Métricas agregadas de desempenho</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-sm shadow-indigo-600/25 transition group-hover:bg-indigo-700 sm:text-sm">
+              <span>Continuar como Professor</span>
               <ArrowRight
                 className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
                 aria-hidden="true"
