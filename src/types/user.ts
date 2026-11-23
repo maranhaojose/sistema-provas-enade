@@ -6,6 +6,7 @@ export interface BaseUser {
   readonly name: string;
   readonly email: string;
   readonly initials: string;
+  readonly profileId: string;
   readonly role: UserRole;
   readonly isActive: boolean;
 }
