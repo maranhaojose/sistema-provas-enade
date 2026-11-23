@@ -3,11 +3,11 @@ import {
   ArrowLeft,
   Clock3,
   FolderKanban,
-  GraduationCap,
-  LogIn,
   RotateCcw,
   ShieldCheck,
 } from "lucide-react";
+import { AccessPortalScreen } from "./components/AccessPortalScreen";
+import { AdminAccessScreen } from "./components/AdminAccessScreen";
 import { Header, type AppView } from "./components/Header";
 import { AppSidebar } from "./components/AppSidebar";
 import { Dashboard } from "./components/Dashboard";
@@ -15,12 +15,105 @@ import { MetricsModal } from "./components/MetricsModal";
 import { QuestionSidebar } from "./components/QuestionSidebar";
 import { QuestionCard } from "./components/QuestionCard";
 import { ResultsModal } from "./components/ResultsModal";
+import { StudentLoginScreen } from "./components/StudentLoginScreen";
 import { UserProfileModal, type UserModalTab } from "./components/UserProfileModal";
 import { useSimulado } from "./hooks/useSimulado";
 import { examMeta, filterQuestionsByContext, questions, student } from "./data/questions";
 import { availableYears, studyAreas } from "./data/areas";
 import { cn } from "./lib/utils";
+import type {
+  AuthRole,
+  AuthScreenStep,
+  AuthSession,
+  StudentLoginCredentials,
+} from "./types/auth";
 import type { SimuladoNavigationContext, StudentProfile } from "./types/question";
+
+const AUTH_SESSION_STORAGE_KEY = "simula-enade:auth-session";
+
+function readStoredSession(): AuthSession | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw =
+      window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY) ??
+      window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<AuthSession>;
+    if (parsed.role === "student" && typeof parsed.identifier === "string") {
+      return {
+        role: "student",
+        identifier: parsed.identifier,
+        studentName:
+          typeof parsed.studentName === "string" && parsed.studentName.trim()
+            ? parsed.studentName
+            : student.name,
+        studentInitials:
+          typeof parsed.studentInitials === "string" && parsed.studentInitials.trim()
+            ? parsed.studentInitials
+            : student.initials,
+        authenticatedAt:
+          typeof parsed.authenticatedAt === "string"
+            ? parsed.authenticatedAt
+            : new Date().toISOString(),
+      };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function clearStoredSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+  } catch {
+    // Ignore storage access errors
+  }
+}
+
+function buildStudentProfileFromIdentifier(identifier: string): StudentProfile {
+  const normalized = identifier.trim().toLowerCase();
+  const defaultMatches = [
+    "ana.moraes@enade.edu.br",
+    "ana.moraes",
+    "aluno@enade.edu.br",
+    student.registration.toLowerCase(),
+  ];
+
+  if (defaultMatches.includes(normalized)) {
+    return student;
+  }
+
+  const localPart = identifier.includes("@") ? identifier.split("@")[0] : identifier;
+  const words = localPart
+    .replace(/[._-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return student;
+  }
+
+  const formattedName = words
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(" ");
+
+  const initials =
+    words.length === 1
+      ? words[0].slice(0, 2).toUpperCase()
+      : `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
+
+  return {
+    ...student,
+    name: formattedName,
+    initials,
+  };
+}
 
 function readInitialRouteFromUrl(): {
   view: AppView;
@@ -60,13 +153,23 @@ function readInitialRouteFromUrl(): {
 }
 
 export default function App() {
+  const [authSession, setAuthSession] = useState<AuthSession | null>(readStoredSession);
+  const [authStep, setAuthStep] = useState<AuthScreenStep>("select-role");
+  const [showLogoutNotice, setShowLogoutNotice] = useState(false);
   const [routeState, setRouteState] = useState(readInitialRouteFromUrl);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile>(student);
+  const [studentProfile, setStudentProfile] = useState<StudentProfile>(() => {
+    const stored = readStoredSession();
+    if (!stored) return student;
+    return {
+      ...student,
+      name: stored.studentName,
+      initials: stored.studentInitials,
+    };
+  });
   const [isResultsOpen, setIsResultsOpen] = useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userModalTab, setUserModalTab] = useState<UserModalTab>("menu");
-  const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -199,55 +302,94 @@ export default function App() {
     setIsUserModalOpen(true);
   };
 
+  const handleSelectAuthRole = (role: AuthRole) => {
+    setShowLogoutNotice(false);
+    setAuthStep(role === "student" ? "student-login" : "admin-login");
+  };
+
+  const handleStudentLogin = ({ identifier, rememberMe }: StudentLoginCredentials) => {
+    const profile = buildStudentProfileFromIdentifier(identifier);
+    const nextSession: AuthSession = {
+      role: "student",
+      identifier,
+      studentName: profile.name,
+      studentInitials: profile.initials,
+      authenticatedAt: new Date().toISOString(),
+    };
+
+    clearStoredSession();
+    if (typeof window !== "undefined") {
+      try {
+        const storage = rememberMe ? window.localStorage : window.sessionStorage;
+        storage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+      } catch {
+        // Ignore storage access errors
+      }
+    }
+
+    setStudentProfile(profile);
+    setAuthSession(nextSession);
+    setShowLogoutNotice(false);
+  };
+
+  const handleUpdateStudentProfile = (updated: StudentProfile) => {
+    setStudentProfile(updated);
+    if (!authSession || typeof window === "undefined") return;
+
+    const updatedSession: AuthSession = {
+      ...authSession,
+      studentName: updated.name,
+      studentInitials: updated.initials,
+    };
+    setAuthSession(updatedSession);
+
+    try {
+      if (window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)) {
+        window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
+      } else if (window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY)) {
+        window.sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  };
+
   const handleLogout = () => {
     setIsUserModalOpen(false);
     setIsMetricsOpen(false);
     setIsResultsOpen(false);
     setIsMobileNavOpen(false);
-    setIsLoggedOut(true);
+    clearStoredSession();
+    setAuthSession(null);
+    setAuthStep("select-role");
+    setShowLogoutNotice(true);
   };
 
-  if (isLoggedOut) {
+  if (!authSession) {
+    if (authStep === "student-login") {
+      return (
+        <StudentLoginScreen
+          onBack={() => setAuthStep("select-role")}
+          onSwitchToAdmin={() => setAuthStep("admin-login")}
+          onSubmitLogin={handleStudentLogin}
+        />
+      );
+    }
+
+    if (authStep === "admin-login") {
+      return (
+        <AdminAccessScreen
+          onBack={() => setAuthStep("select-role")}
+          onSwitchToStudent={() => setAuthStep("student-login")}
+        />
+      );
+    }
+
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-8 text-center shadow-card">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm shadow-brand-600/30">
-            <GraduationCap className="h-7 w-7" aria-hidden="true" />
-          </div>
-
-          <h1 className="mt-4 text-xl font-extrabold tracking-tight text-slate-900">
-            Você saiu do Simula<span className="text-brand-600">ENADE</span>
-          </h1>
-          <p className="mt-1.5 text-xs font-medium text-slate-500">
-            Sua sessão foi encerrada com segurança. Clique abaixo para acessar o sistema novamente.
-          </p>
-
-          <div className="mt-6 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 text-left">
-            <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
-                {studentProfile.initials}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-slate-900">
-                  {studentProfile.name}
-                </p>
-                <p className="truncate text-[11px] font-medium text-slate-500">
-                  {studentProfile.course} · {studentProfile.registration}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsLoggedOut(false)}
-            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-bold text-white shadow-sm shadow-brand-600/25 transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:text-sm"
-          >
-            <LogIn className="h-4 w-4" aria-hidden="true" />
-            Entrar novamente no sistema
-          </button>
-        </div>
-      </div>
+      <AccessPortalScreen
+        logoutNotice={showLogoutNotice}
+        onSelectRole={handleSelectAuthRole}
+      />
     );
   }
 
@@ -456,7 +598,7 @@ export default function App() {
         initialTab={userModalTab}
         student={studentProfile}
         onClose={() => setIsUserModalOpen(false)}
-        onUpdateStudent={setStudentProfile}
+        onUpdateStudent={handleUpdateStudentProfile}
         onLogout={handleLogout}
       />
     </div>
