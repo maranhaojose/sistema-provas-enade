@@ -23,6 +23,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   registerStudent: (payload: RegisterStudentPayload) => Promise<void>;
   registerProfessor: (payload: RegisterProfessorPayload) => Promise<void>;
+  updateUser: (user: AppUser) => void;
   logout: () => void;
   clearError: () => void;
 }
@@ -112,6 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateUser = useCallback((nextUser: AppUser) => {
+    setUser(nextUser);
+  }, []);
+
   const logout = useCallback(() => {
     authService.clearToken();
     setUser(null);
@@ -131,10 +136,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       registerStudent,
       registerProfessor,
+      updateUser,
       logout,
       clearError,
     }),
-    [user, token, isLoading, error, login, registerStudent, registerProfessor, logout, clearError],
+    [
+      user,
+      token,
+      isLoading,
+      error,
+      login,
+      registerStudent,
+      registerProfessor,
+      updateUser,
+      logout,
+      clearError,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
