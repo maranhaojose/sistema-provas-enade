@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import type { AppView } from "./Header";
+import type { AppUser } from "../types/user";
 import type { SimuladoNavigationContext, StudyArea } from "../types/question";
 import { availableYears, studyAreas, yearQuestionsCount } from "../data/areas";
 import { cn } from "../lib/utils";
@@ -41,6 +42,7 @@ interface AppSidebarProps {
   readonly activeView: AppView;
   readonly activeYear?: number | "Todos";
   readonly activeAreaSlug?: string;
+  readonly userRole?: AppUser["role"];
   readonly onToggleExpand: () => void;
   readonly onCloseMobile: () => void;
   readonly onNavigateHome: () => void;
@@ -54,6 +56,7 @@ export function AppSidebar({
   activeView,
   activeYear,
   activeAreaSlug,
+  userRole,
   onToggleExpand,
   onCloseMobile,
   onNavigateHome,
@@ -142,6 +145,24 @@ export function AppSidebar({
             </div>
           )}
         </button>
+
+        {expanded && userRole && (
+          <span
+            className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset ${
+              userRole === "ADMIN"
+                ? "bg-slate-100 text-slate-700 ring-slate-200"
+                : userRole === "PROFESSOR"
+                  ? "bg-indigo-50 text-indigo-700 ring-indigo-100"
+                  : "bg-brand-50 text-brand-700 ring-brand-100"
+            }`}
+          >
+            {userRole === "ADMIN"
+              ? "Administrador"
+              : userRole === "PROFESSOR"
+                ? "Professor"
+                : "Aluno"}
+          </span>
+        )}
 
         {isMobile ? (
           <button
