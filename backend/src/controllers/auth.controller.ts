@@ -3,6 +3,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma.js";
+import type { JwtUserPayload } from "../middlewares/auth.middleware.js";
 import {
   loginSchema,
   registerProfessorSchema,
@@ -11,7 +12,7 @@ import {
 
 const BCRYPT_ROUNDS = 10;
 
-type UserWithProfiles = Prisma.UserGetPayload<{
+export type UserWithProfiles = Prisma.UserGetPayload<{
   include: {
     studentProfile: true;
     professorProfile: true;
@@ -27,13 +28,14 @@ function getInitials(name: string): string {
 }
 
 /** Remove dados sensíveis e achata o perfil especializado para o frontend. */
-function toPublicUser(user: UserWithProfiles) {
+export function toPublicUser(user: UserWithProfiles) {
   const base = {
     id: user.id,
     name: user.name,
     email: user.email,
     initials: getInitials(user.name),
     isActive: user.isActive,
+    profileId: "",
   };
 
   switch (user.role) {
@@ -45,6 +47,7 @@ function toPublicUser(user: UserWithProfiles) {
       return {
         ...base,
         role: UserRole.STUDENT,
+        profileId: profile.id,
         registration: profile.registration,
         course: profile.course,
         semester: profile.semester,
@@ -61,6 +64,7 @@ function toPublicUser(user: UserWithProfiles) {
       return {
         ...base,
         role: UserRole.PROFESSOR,
+        profileId: profile.id,
         institutionalId: profile.institutionalId,
         department: profile.department,
         academicTitle: profile.academicTitle,
@@ -76,6 +80,7 @@ function toPublicUser(user: UserWithProfiles) {
       return {
         ...base,
         role: UserRole.ADMIN,
+        profileId: profile.id,
         employeeCode: profile.employeeCode,
         sector: profile.sector,
         accessLevel: profile.accessLevel,
@@ -84,12 +89,46 @@ function toPublicUser(user: UserWithProfiles) {
   }
 }
 
-function signToken(request: FastifyRequest, user: UserWithProfiles): string {
-  return request.server.jwt.sign({
+/** Constrói as claims de perfil que acompanham o JWT de sessão. */
+function buildTokenPayload(user: UserWithProfiles): JwtUserPayload {
+  const base = {
     sub: user.id,
     email: user.email,
     role: user.role,
-  });
+  };
+
+  switch (user.role) {
+    case UserRole.STUDENT: {
+      if (!user.studentProfile) {
+        throw new Error(`Perfil de aluno ausente para o usuário ${user.id}.`);
+      }
+      return { ...base, profileId: user.studentProfile.id };
+    }
+    case UserRole.PROFESSOR: {
+      if (!user.professorProfile) {
+        throw new Error(`Perfil de professor ausente para o usuário ${user.id}.`);
+      }
+      return {
+        ...base,
+        profileId: user.professorProfile.id,
+        isVerified: user.professorProfile.isVerified,
+      };
+    }
+    case UserRole.ADMIN: {
+      if (!user.adminProfile) {
+        throw new Error(`Perfil administrativo ausente para o usuário ${user.id}.`);
+      }
+      return {
+        ...base,
+        profileId: user.adminProfile.id,
+        accessLevel: user.adminProfile.accessLevel,
+      };
+    }
+  }
+}
+
+function signToken(request: FastifyRequest, user: UserWithProfiles): string {
+  return request.server.jwt.sign(buildTokenPayload(user));
 }
 
 function sendValidationError(reply: FastifyReply, error: { flatten: () => unknown }) {
