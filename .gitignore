@@ -33,6 +33,7 @@ ENV/
 dev.db
 backend/prisma/dev.db
 backend/prisma/*.db
+backend/prisma/.dev-seed-credentials.json
 
 # Logs
 logs/
