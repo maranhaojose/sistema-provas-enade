@@ -28,7 +28,7 @@
 | :--- | :---: | :---: | :---: |
 | **Autenticação e edição do próprio perfil** | Sim | Sim | Sim |
 | **Resolver simulados e questões avulsas** | Sim | Sim (modo teste) | Sim |
-| **Visualizar gabarito comentado e histórico próprio** | Sim | Sim | Sim |
+| **Visualizar gabarito comentado e histórico próprio** | Sim | Não (modo teste sem histórico pessoal persistido, salvo decisão futura) | Não |
 | **Configurar preferências de prova e meta semanal** | Sim | Não | Não |
 | **Criar, editar e revisar questões e explicações** | Não | Sim | Sim |
 | **Montar cadernos de simulados / listas por turma** | Não | Sim | Sim |
@@ -36,6 +36,10 @@
 | **Cadastrar edições oficiais do ENADE (`Exam`) e áreas** | Não | Sugerir / vincular | Gerenciar (CRUD completo) |
 | **Importar provas em lote (saída JSON do `pdf-parser`)** | Não | Não | Sim |
 | **Gerenciar usuários, ativar/desativar contas e aprovar papéis** | Não | Não | Sim |
+
+> Histórico próprio (`Attempt`/`StudentAnswer`) existe apenas para `STUDENT`;
+> PROFESSOR e ADMIN usam o simulador em modo teste sem persistência pessoal até
+> que um modelo de ownership cross-role seja decidido em tarefa específica.
 
 ---
 
@@ -108,7 +112,7 @@ model StudentProfile {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   attempts Attempt[]
 
   @@map("student_profiles")
@@ -129,7 +133,7 @@ model ProfessorProfile {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User       @relation(fields: [userId], references: [id], onDelete: Restrict)
   authoredQuestions Question[] @relation("QuestionAuthor")
 
   @@map("professor_profiles")
@@ -148,7 +152,7 @@ model AdminProfile {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@map("admin_profiles")
 }
@@ -157,16 +161,20 @@ model AdminProfile {
 // INTEGRAÇÃO COM PROVAS E HISTÓRICO
 // ==========================================
 
+// Catálogo usa remoção lógica; FKs de histórico usam Restrict para impedir
+// exclusão física que apague respostas de tentativas.
 model Exam {
   id          String     @id @default(uuid())
   title       String
   year        Int
   course      String
   description String?
+  deletedAt   DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   questions   Question[]
 
+  @@index([deletedAt])
   @@map("exams")
 }
 
@@ -183,14 +191,16 @@ model Question {
   prompt        String
   correctLetter String
   explanation   String
+  deletedAt     DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  exam         Exam?             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam         Exam?             @relation(fields: [examId], references: [id], onDelete: Restrict)
   author       ProfessorProfile? @relation("QuestionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   alternatives Alternative[]
   answers      StudentAnswer[]
 
+  @@index([deletedAt])
   @@map("questions")
 }
 
@@ -214,7 +224,7 @@ model Attempt {
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
 
-  student StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Restrict)
   answers StudentAnswer[]
 
   @@map("attempts")
@@ -228,8 +238,8 @@ model StudentAnswer {
   isCorrect      Boolean
   answeredAt     DateTime @default(now())
 
-  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Restrict)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
 
   @@unique([attemptId, questionId])
   @@map("student_answers")
@@ -337,13 +347,19 @@ export type AppUser = StudentUserProfile | ProfessorUserProfile | AdminUserProfi
 
 1. **Garantir banco PostgreSQL ativo via Docker:**
    ```bash
-   docker compose up -d postgres
+   docker compose up -d db
    ```
 2. **Gerar e aplicar a migration no Prisma:**
    ```bash
    npx prisma migrate dev --name add_user_entities
    npx prisma generate
    ```
+
+   A migration corretiva `20261124130000_preserve_student_answer_history`
+   (remoção lógica de catálogo e FKs de histórico com `RESTRICT`) também deve
+   ser aplicada antes de qualquer escrita em ambiente compartilhado. Seeds de
+   contas só rodam em ambiente local autorizado — ver `README.md` e
+   `docs/runbook-cutover-postgresql.md`.
 3. **Criar script `backend/prisma/seed.ts` com 3 usuários padrão:**
    * **Aluno (`STUDENT`):** *Ana Beatriz Moraes* (mantendo paridade com o mock atual da Sprint 1).
    * **Professor (`PROFESSOR`):** Docente vinculado às áreas de *Banco de Dados* e *Engenharia de Software* com `isVerified: true`.
