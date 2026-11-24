@@ -19,7 +19,7 @@ as rotas protegidas do frontend.
 | :--- | :---: | :---: | :---: |
 | Autenticação e edição do próprio perfil | Sim | Sim | Sim |
 | Resolver simulados e questões avulsas | Sim | Sim (modo teste) | Sim |
-| Visualizar gabarito comentado e histórico próprio | Sim | Sim | Sim |
+| Visualizar gabarito comentado e histórico próprio | Sim | Não (modo teste sem histórico pessoal persistido, salvo decisão futura) | Não |
 | Configurar preferências de prova e meta semanal | Sim | Não | Não |
 | Criar, editar e revisar questões e explicações | Não | Sim | Sim |
 | Montar cadernos de simulados / listas por turma | Não | Sim | Sim |
@@ -46,6 +46,10 @@ as rotas protegidas do frontend.
 - Questões criadas por docentes são vinculadas ao `ProfessorProfile` via
   `Question.authorId`; a exclusão do perfil do professor preserva a questão
   (`onDelete: SetNull`).
-- Histórico de resolução (`Attempt` / `StudentAnswer`) pertence ao
-  `StudentProfile`, garantindo que métricas individuais não sejam misturadas
-  entre alunos.
+- Histórico de resolução (`Attempt` / `StudentAnswer`) pertence exclusivamente
+  ao `StudentProfile`, garantindo que métricas individuais não sejam misturadas
+  entre alunos. Professores e administração podem usar o simulador em modo teste,
+  mas não possuem histórico pessoal persistido enquanto não existir um modelo de
+  ownership cross-role (decisão de produto em tarefa própria, com ADR).
+- Preferências de prova e meta semanal permanecem em `StudentProfile`; elas não
+  são usadas como critério de ownership de tentativas.
