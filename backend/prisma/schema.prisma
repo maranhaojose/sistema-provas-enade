@@ -61,7 +61,7 @@ model StudentProfile {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   attempts Attempt[]
 
   @@map("student_profiles")
@@ -82,7 +82,7 @@ model ProfessorProfile {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User       @relation(fields: [userId], references: [id], onDelete: Restrict)
   authoredQuestions Question[] @relation("QuestionAuthor")
 
   @@map("professor_profiles")
@@ -101,7 +101,7 @@ model AdminProfile {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@map("admin_profiles")
 }
@@ -110,16 +110,20 @@ model AdminProfile {
 // INTEGRAÇÃO COM PROVAS E HISTÓRICO
 // ==========================================
 
+// Catálogo usa remoção lógica: respostas de tentativas são histórico e não podem
+// ser apagadas por exclusão de prova/questão. FKs de histórico usam Restrict.
 model Exam {
   id          String     @id @default(uuid())
   title       String
   year        Int
   course      String
   description String?
+  deletedAt   DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   questions   Question[]
 
+  @@index([deletedAt])
   @@map("exams")
 }
 
@@ -136,14 +140,16 @@ model Question {
   prompt        String
   correctLetter String
   explanation   String
+  deletedAt     DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  exam         Exam?             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  exam         Exam?             @relation(fields: [examId], references: [id], onDelete: Restrict)
   author       ProfessorProfile? @relation("QuestionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   alternatives Alternative[]
   answers      StudentAnswer[]
 
+  @@index([deletedAt])
   @@map("questions")
 }
 
@@ -167,7 +173,7 @@ model Attempt {
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
 
-  student StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Restrict)
   answers StudentAnswer[]
 
   @@map("attempts")
@@ -181,8 +187,8 @@ model StudentAnswer {
   isCorrect      Boolean
   answeredAt     DateTime @default(now())
 
-  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Restrict)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
 
   @@unique([attemptId, questionId])
   @@map("student_answers")
