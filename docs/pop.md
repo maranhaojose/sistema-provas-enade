@@ -59,7 +59,7 @@ A clonagem inicial deve ser feita **apenas uma vez**. Para trabalhar posteriorme
    ```bash
    cd NOME_DO_REPOSITORIO
    git status   # Confirma diretório de trabalho limpo
-   git branch   # Lista a branch ativa inicial (geralmente develop ou main)
+   git branch   # Lista as branches locais; a branch de integração é develop
    ```
 
 > **Diferença Técnica:** `git clone` baixa o histórico integral, configurações e arquivos do zero em uma pasta nova. Atualizações subsequentes usam `git pull` para trazer apenas os commits que foram alterados remotamente.
@@ -82,11 +82,13 @@ Antes de criar qualquer ramificação, sincronize sua máquina local com a branc
 
 ```bash
 git status                # 1. Garanta que não há alterações pendentes ou não salvas
-git switch develop        # 2. Muda para a branch base (use "main" se o repo não tiver develop)
+git switch develop        # 2. Muda para a branch de integração padrão: develop
 git pull origin develop   # 3. Baixa os commits mais recentes integrados pela equipe
 ```
 
 > **Atenção:** Se o comando `git status` indicar arquivos modificados, **não** execute comandos destrutivos como `git reset --hard` sem autorização. Finalize, guarde (`git stash`) ou desfaça ordenadamente antes de trocar de branch.
+
+> **Exceção formal:** outro repositório só pode usar branch de integração diferente de `develop` se houver aprovação explícita do Tech Lead e decisão registrada no repositório. Não substitua `develop` por `main` por conveniência, e mantenha PRs, limpeza de branch e atualização local alinhados à mesma branch.
 
 ---
 
@@ -193,7 +195,7 @@ git push
 No GitHub, acesse a aba **Pull Requests** e clique no botão verde **New pull request**.
 
 ### Configuração Crítica das Branches
-* **Base (Destino à esquerda):** `develop` (ou a branch de integração indicada pelo projeto). **Nunca selecione `main`!**
+* **Base (Destino à esquerda):** `develop`, sempre. **Nunca selecione `main`!** Exceção apenas com aprovação formal do Tech Lead registrada no repositório.
 * **Compare (Origem à direita):** Selecione a sua branch criada (ex.: `feat/issue-123-cadastro-usuario`).
 
 ### Título e Modelo Padronizado de Descrição
@@ -284,12 +286,12 @@ git branch -d feat/issue-123-cadastro-usuario   # 3. Exclua a branch local concl
 
 | Falha Potencial | Risco para a Equipe | Ação Preventiva / Solução Segura |
 | :--- | :--- | :--- |
-| **Commit direto na `develop` ou `main`** | Rejeição pelo servidor e risco de instabilidade | Executar `git switch -c feat/issue-X...` para mover o trabalho para branch própria. |
+| **Commit direto na `develop` ou `main`** | Rejeição pelo servidor e risco de instabilidade | `git branch feat/issue-X-descricao` preserva o commit na nova branch; confirme com `git log` que ele está lá. Faça `git fetch origin`, verifique trabalho local não relacionado e guarde-o com `git stash` **antes** de qualquer reset. Se o commit já foi publicado em `develop`, use `git revert` em vez de reescrever histórico. Somente após confirmar tudo, realinhe `develop` com `origin/develop` (`git switch develop && git reset --hard origin/develop`, com autorização). Criar a branch **não** remove o commit de `develop`. |
 | **Esquecer o `#ID` no commit** | Perda de rastreabilidade na auditoria do GitHub | Em caso de último commit local (antes do push), corrigir com: `git commit --amend -m "tipo: descrição #ID"`. |
 | **Usar `closes #123` no commit/PR** | Fecha a Issue antes da homologação do Tech Lead | Usar estritamente a referência neutra `#123` sem verbos ingleses vinculados. |
-| **Enviar arquivos `.env` com tokens** | Vazamento de credenciais e risco crítico de segurança | Adicionar imediatamente ao `.gitignore` e executar `git rm --cached .env`. |
+| **Enviar arquivos `.env` com tokens** | Vazamento de credenciais e risco crítico de segurança | Revogue/rotacione imediatamente todas as credenciais expostas e notifique o Tech Lead. Remova do índice com `git rm --cached .env` e adicione ao `.gitignore`; coordene a limpeza do histórico (`git filter-repo`/BFG) e invalide os tokens nos provedores. `.gitignore` e `git rm --cached` **não** apagam o que já foi comitado. |
 | **Abrir PR com base apontando para `main`** | Conflito direto com versão de produção estável | No GitHub, editar o cabeçalho do PR e alterar a *base branch* para `develop`. |
-| **Uso acidental de `git reset --hard`** | Destruição irreversível de código local não salvo | Use `git stash` para guardar alterações com segurança ou consulte o Líder. |
+| **Uso acidental de `git reset --hard`** | Destruição irreversível de código local não salvo | Não execute sem revisar `git status` e garantir backup. Para preservar alterações, use `git stash` ou crie branch temporária **antes** do reset. Após um reset acidental, verifique stashes existentes, `git reflog`, autosave do editor e backups locais; a recuperação **não é garantida**. |
 
 ---
 
