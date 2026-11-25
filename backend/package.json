@@ -8,8 +8,15 @@
     "build": "tsup src/server.ts --format esm --dts --out-dir dist",
     "start": "node dist/server.mjs",
     "typecheck": "tsc --noEmit",
+    "typecheck:scripts": "tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --esModuleInterop --skipLibCheck prisma/*.ts tests/*.ts",
+    "test": "tsx --test tests/*.test.ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed",
+    "prisma:seed:test": "tsx prisma/seed-test-users.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "keywords": [
     "enade",

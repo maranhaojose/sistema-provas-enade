@@ -1,4 +1,5 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { z } from "zod";
 
@@ -27,7 +28,9 @@ export async function listQuestionsHandler(
 
   const { area, difficulty, limit, offset } = parseResult.data;
 
-  const whereClause: { area?: string; difficulty?: string } = {};
+  // Questões removidas logicamente não devem aparecer no catálogo, mas seus
+  // registros (e as respostas associadas) permanecem para histórico.
+  const whereClause: Prisma.QuestionWhereInput = { deletedAt: null };
   if (area) whereClause.area = area;
   if (difficulty) whereClause.difficulty = difficulty;
 
@@ -72,7 +75,7 @@ export async function getQuestionByIdHandler(
   const { id } = parseResult.data;
 
   const question = await prisma.question.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     include: {
       alternatives: {
         orderBy: { letter: "asc" },
@@ -92,7 +95,7 @@ export async function seedInitialQuestionsHandler(
   _request: FastifyRequest,
   reply: FastifyReply
 ) {
-  const existingCount = await prisma.question.count();
+  const existingCount = await prisma.question.count({ where: { deletedAt: null } });
   if (existingCount > 0) {
     return reply.send({
       message: "Database already contains questions. Skipping seed.",

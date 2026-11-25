@@ -3,7 +3,7 @@
 Plataforma completa de simulados e resolução de questões para o **ENADE** (Exame Nacional de Desempenho dos Estudantes). O ecossistema é composto por:
 
 1. **Frontend SPA:** Interface moderna e acessível em **React 18 + Vite + TypeScript + Tailwind CSS**.
-2. **Backend API:** Serviço REST em **Node.js + Fastify + Prisma ORM + SQLite**.
+2. **Backend API:** Serviço REST em **Node.js + Fastify + Prisma ORM + PostgreSQL**.
 3. **Módulo Extrator (Parser):** Pipeline em **Python 3.12** utilizando **PyMuPDF** e **pdfplumber** para extração de questões e metadados diretamente dos PDFs oficiais das provas do ENADE.
 
 ---
@@ -14,8 +14,9 @@ Plataforma completa de simulados e resolução de questões para o **ENADE** (Ex
 .
 ├── backend/                       # Backend REST (Node.js + TypeScript + Fastify + Prisma)
 │   ├── prisma/
-│   │   ├── schema.prisma          # Modelos de dados (Exam, Question, Alternative)
-│   │   └── dev.db                 # Banco SQLite local (ignorado pelo Git)
+│   │   ├── schema.prisma          # Modelos (User, perfis, Exam, Question, histórico)
+│   │   ├── migrations/            # Migration inicial e migration corretiva de histórico
+│   │   └── seed.ts                # Contas fixture (guarda de ambiente obrigatória)
 │   ├── src/
 │   │   ├── controllers/           # Controllers de health check e questões
 │   │   ├── routes/                # Definição e registro de rotas (/health, /api/questions)
@@ -66,11 +67,17 @@ npm run typecheck  # Apenas checagem estática de tipos
 
 ---
 
-### 2. Backend (Fastify + Prisma)
+### 2. Backend (Fastify + Prisma + PostgreSQL)
 
 ```bash
+# Na raiz do projeto, suba o PostgreSQL do docker-compose:
+cp .env.example .env      # ajuste as credenciais locais
+docker compose up -d db
+
 cd backend
 npm install
+cp .env.example .env      # DATABASE_URL localhost, NODE_ENV=development
+npx prisma migrate deploy # Cria o schema e aplica a migration de retenção de histórico
 npm run prisma:generate   # Gera o Prisma Client
 npm run dev               # Inicia o servidor com hot-reload (tsx) na porta 3333
 ```
@@ -83,10 +90,33 @@ Acesse:
 Outros comandos do backend:
 
 ```bash
-npm run build      # Compila TypeScript para dist/ com tsup
-npm start          # Roda a versão de produção (dist/server.mjs)
-npm run typecheck  # Validação estática de tipos
+npm run build             # Compila TypeScript para dist/ com tsup
+npm start                 # Roda a versão de produção (dist/server.mjs)
+npm run typecheck         # Validação estática de tipos do servidor
+npm run typecheck:scripts # Validação de seeds e testes
+npm test                  # Testes (requer TEST_DATABASE_URL, ver runbook)
 ```
+
+#### Seeds de contas (somente ambiente local autorizado)
+
+```bash
+NODE_ENV=development ALLOW_DEV_SEED=true npm run prisma:seed
+NODE_ENV=development ALLOW_DEV_SEED=true npm run prisma:seed:test
+```
+
+As guardas exigem `NODE_ENV=development|test`, `ALLOW_DEV_SEED=true` e host de
+banco local. As três contas fixture são criadas de forma atômica; se existirem,
+credenciais não são rotacionadas. Senhas geradas ficam apenas em
+`backend/prisma/.dev-seed-credentials.json` (`0600`, ignorado pelo Git).
+Nunca execute seeds em banco compartilhado. Detalhes em
+[`docs/runbook-cutover-postgresql.md`](docs/runbook-cutover-postgresql.md).
+
+#### Histórico e remoção de catálogo
+
+`Exam` e `Question` usam remoção lógica (`deletedAt`) e não aparecem nas
+consultas após arquivamento. Respostas de tentativas são histórico: foreign keys
+de `StudentAnswer`, `Attempt` e perfis usam `RESTRICT`, impedindo hard delete que
+apague esse histórico. A política e os testes estão descritos no runbook acima.
 
 #### Endpoints da API
 

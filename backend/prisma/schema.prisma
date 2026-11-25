@@ -3,52 +3,193 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// ENUMS DE ACESSO E DOMÍNIO
+// ==========================================
+
+enum UserRole {
+  STUDENT
+  PROFESSOR
+  ADMIN
+}
+
+enum AdminAccessLevel {
+  COORDINATOR // Coordenação de curso / NDE (gestão acadêmica e provas)
+  SUPER_ADMIN // Administração técnica total (usuários, logs e sistema)
+}
+
+// ==========================================
+// ENTIDADE BASE DE USUÁRIOS
+// ==========================================
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(STUDENT)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Perfis especializados (relacionamento 1:1 conforme o role)
+  studentProfile   StudentProfile?
+  professorProfile ProfessorProfile?
+  adminProfile     AdminProfile?
+
+  @@index([role])
+  @@map("users")
+}
+
+// ==========================================
+// OBJETIVO 2: MODELAGEM DO USUÁRIO ALUNO
+// ==========================================
+
+model StudentProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  registration     String   @unique // Matrícula acadêmica (ex.: "2021.1.04512")
+  course           String // Ex.: "Sistemas de Computação"
+  semester         Int? // Período atual
+  weeklyGoalTarget Int      @default(20) // Meta semanal de questões
+  showTimerInExam  Boolean  @default(true) // Preferência já prevista no UserProfileModal
+  instantFeedback  Boolean  @default(true) // Preferência já prevista no UserProfileModal
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  attempts Attempt[]
+
+  @@map("student_profiles")
+}
+
+// ==========================================
+// OBJETIVO 3: MODELAGEM DO USUÁRIO PROFESSOR
+// ==========================================
+
+model ProfessorProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  institutionalId     String   @unique // Matrícula funcional / SIAPE
+  department          String // Ex.: "Departamento de Computação"
+  academicTitle       String? // Ex.: "Mestre", "Doutor", "Especialista"
+  specializationAreas String[] // Slugs das disciplinas (ex.: ["banco-de-dados", "redes-de-computadores"])
+  isVerified          Boolean  @default(false) // Validado pela administração antes de publicar questões
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user              User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  authoredQuestions Question[] @relation("QuestionAuthor")
+
+  @@map("professor_profiles")
+}
+
+// ==========================================
+// OBJETIVO 4: MODELAGEM DO USUÁRIO ADMINISTRAÇÃO
+// ==========================================
+
+model AdminProfile {
+  id           String           @id @default(uuid())
+  userId       String           @unique
+  employeeCode String           @unique // Código funcional administrativo
+  sector       String // Ex.: "Coordenação de Curso", "NDE", "Suporte TI"
+  accessLevel  AdminAccessLevel @default(COORDINATOR)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("admin_profiles")
+}
+
+// ==========================================
+// INTEGRAÇÃO COM PROVAS E HISTÓRICO
+// ==========================================
+
+// Catálogo usa remoção lógica: respostas de tentativas são histórico e não podem
+// ser apagadas por exclusão de prova/questão. FKs de histórico usam Restrict.
 model Exam {
   id          String     @id @default(uuid())
   title       String
   year        Int
   course      String
   description String?
+  deletedAt   DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   questions   Question[]
 
+  @@index([deletedAt])
   @@map("exams")
 }
 
 model Question {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   examId        String?
+  authorId      String? // Vínculo com o professor autor/revisor da questão
   number        Int
   area          String
-  difficulty    String        @default("medium") // easy, medium, hard
-  contextText   String        // Texto-base / contextualização
-  supportText   String?       // Código de apoio, citação ou dados adicionais
-  prompt        String        // Comando da questão
-  correctLetter String        // 'A', 'B', 'C', 'D' ou 'E'
-  explanation   String        // Resolução comentada e gabarito
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  areaSlug      String?
+  difficulty    String   @default("medium")
+  contextText   String
+  supportText   String?
+  prompt        String
+  correctLetter String
+  explanation   String
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  exam          Exam?         @relation(fields: [examId], references: [id], onDelete: Cascade)
-  alternatives  Alternative[]
+  exam         Exam?             @relation(fields: [examId], references: [id], onDelete: Restrict)
+  author       ProfessorProfile? @relation("QuestionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  alternatives Alternative[]
+  answers      StudentAnswer[]
 
+  @@index([deletedAt])
   @@map("questions")
 }
 
 model Alternative {
   id         String   @id @default(uuid())
   questionId String
-  letter     String   // 'A', 'B', 'C', 'D', 'E'
+  letter     String
   text       String
   createdAt  DateTime @default(now())
 
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([questionId, letter])
   @@map("alternatives")
+}
+
+model Attempt {
+  id         String    @id @default(uuid())
+  studentId  String
+  title      String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  student StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  answers StudentAnswer[]
+
+  @@map("attempts")
+}
+
+model StudentAnswer {
+  id             String   @id @default(uuid())
+  attemptId      String
+  questionId     String
+  selectedLetter String
+  isCorrect      Boolean
+  answeredAt     DateTime @default(now())
+
+  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Restrict)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([attemptId, questionId])
+  @@map("student_answers")
 }
