@@ -1,5 +1,6 @@
 import fastify, { FastifyError, FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
+import fastifyJwt from "@fastify/jwt";
 import { appRoutes } from "./routes/index.js";
 import { healthCheckHandler } from "./controllers/health.controller.js";
 
@@ -13,6 +14,14 @@ export function buildApp(): FastifyInstance {
   // Enable Cross-Origin Resource Sharing for frontend integration
   app.register(cors, {
     origin: true,
+  });
+
+  // JWT authentication used by the protected API routes
+  app.register(fastifyJwt, {
+    secret: process.env.JWT_SECRET || "dev-secret-simula-enade",
+    sign: {
+      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    },
   });
 
   // Root health endpoint for quick Docker/Kubernetes probes

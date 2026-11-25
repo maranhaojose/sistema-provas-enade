@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  AlertCircle,
   ArrowLeft,
   Check,
   ChevronRight,
   GraduationCap,
   LogOut,
   Settings,
+  ShieldCheck,
   Sliders,
   User,
   X,
 } from "lucide-react";
-import type { StudentProfile } from "../types/question";
+import { profileService } from "../services/profile.service";
+import type { AppUser } from "../types/user";
 import { cn } from "../lib/utils";
 
 export type UserModalTab = "menu" | "settings";
@@ -18,48 +21,100 @@ export type UserModalTab = "menu" | "settings";
 interface UserProfileModalProps {
   readonly isOpen: boolean;
   readonly initialTab?: UserModalTab;
-  readonly student: StudentProfile;
+  readonly user: AppUser;
   readonly onClose: () => void;
-  readonly onUpdateStudent: (updated: StudentProfile) => void;
+  readonly onUpdateUser: (user: AppUser) => Promise<void> | void;
   readonly onLogout: () => void;
 }
 
-function getInitials(name: string): string {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (parts.length === 0) return "AL";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+function getRoleLabel(user: AppUser): string {
+  switch (user.role) {
+    case "STUDENT":
+      return "Conta do Estudante";
+    case "PROFESSOR":
+      return user.isVerified ? "Conta do Professor" : "Professor · validação pendente";
+    case "ADMIN":
+      return user.accessLevel === "SUPER_ADMIN"
+        ? "Administração · Super Admin"
+        : "Administração · Coordenação";
+  }
+}
+
+function getRoleSubtitle(user: AppUser): string {
+  switch (user.role) {
+    case "STUDENT":
+      return `${user.course} · ${user.registration}`;
+    case "PROFESSOR":
+      return `${user.department}${user.academicTitle ? ` · ${user.academicTitle}` : ""}`;
+    case "ADMIN":
+      return `${user.sector} · ${user.employeeCode}`;
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Não foi possível salvar as alterações.";
 }
 
 export function UserProfileModal({
   isOpen,
   initialTab = "menu",
-  student,
+  user,
   onClose,
-  onUpdateStudent,
+  onUpdateUser,
   onLogout,
 }: UserProfileModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [activeTab, setActiveTab] = useState<UserModalTab>(initialTab);
-  const [name, setName] = useState(student.name);
-  const [registration, setRegistration] = useState(student.registration);
-  const [course, setCourse] = useState(student.course);
-  const [showTimerInExam, setShowTimerInExam] = useState(true);
-  const [instantFeedback, setInstantFeedback] = useState(true);
+  const [name, setName] = useState(user.name);
+  const [course, setCourse] = useState(user.role === "STUDENT" ? user.course : "");
+  const [semester, setSemester] = useState(
+    user.role === "STUDENT" ? (user.semester ?? "") : "",
+  );
+  const [weeklyGoalTarget, setWeeklyGoalTarget] = useState(
+    user.role === "STUDENT" ? user.weeklyGoalTarget : 20,
+  );
+  const [showTimerInExam, setShowTimerInExam] = useState(
+    user.role === "STUDENT" ? user.showTimerInExam : true,
+  );
+  const [instantFeedback, setInstantFeedback] = useState(
+    user.role === "STUDENT" ? user.instantFeedback : true,
+  );
+  const [department, setDepartment] = useState(
+    user.role === "PROFESSOR" ? user.department : "",
+  );
+  const [academicTitle, setAcademicTitle] = useState(
+    user.role === "PROFESSOR" ? (user.academicTitle ?? "") : "",
+  );
+  const [specializationAreas, setSpecializationAreas] = useState(
+    user.role === "PROFESSOR" ? user.specializationAreas.join(", ") : "",
+  );
+  const [sector, setSector] = useState(user.role === "ADMIN" ? user.sector : "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setActiveTab(initialTab);
-      setName(student.name);
-      setRegistration(student.registration);
-      setCourse(student.course);
-      setSavedSuccess(false);
+    if (!isOpen) return;
+
+    setActiveTab(initialTab);
+    setName(user.name);
+    setError(null);
+    setSavedSuccess(false);
+
+    if (user.role === "STUDENT") {
+      setCourse(user.course);
+      setSemester(user.semester ?? "");
+      setWeeklyGoalTarget(user.weeklyGoalTarget);
+      setShowTimerInExam(user.showTimerInExam);
+      setInstantFeedback(user.instantFeedback);
+    } else if (user.role === "PROFESSOR") {
+      setDepartment(user.department);
+      setAcademicTitle(user.academicTitle ?? "");
+      setSpecializationAreas(user.specializationAreas.join(", "));
+    } else {
+      setSector(user.sector);
     }
-  }, [isOpen, initialTab, student]);
+  }, [isOpen, initialTab, user]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -81,23 +136,48 @@ export function UserProfileModal({
 
   if (!isOpen) return null;
 
-  const handleSaveSettings = (event: FormEvent<HTMLFormElement>) => {
+  const handleSaveSettings = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmedName = name.trim() || student.name;
-    const trimmedRegistration = registration.trim() || student.registration;
-    const trimmedCourse = course.trim() || student.course;
+    setError(null);
+    setIsSaving(true);
 
-    onUpdateStudent({
-      name: trimmedName,
-      registration: trimmedRegistration,
-      course: trimmedCourse,
-      initials: getInitials(trimmedName),
-    });
+    try {
+      let updated: AppUser;
 
-    setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
-    }, 2000);
+      if (user.role === "STUDENT") {
+        updated = await profileService.updateStudentProfile({
+          name: name.trim(),
+          course: course.trim(),
+          semester: semester === "" ? null : Number(semester),
+          weeklyGoalTarget: Number(weeklyGoalTarget),
+          showTimerInExam,
+          instantFeedback,
+        });
+      } else if (user.role === "PROFESSOR") {
+        updated = await profileService.updateProfessorProfile({
+          name: name.trim(),
+          department: department.trim(),
+          academicTitle: academicTitle.trim() || null,
+          specializationAreas: specializationAreas
+            .split(",")
+            .map((area) => area.trim())
+            .filter(Boolean),
+        });
+      } else {
+        updated = await profileService.updateAdminProfile({
+          name: name.trim(),
+          sector: sector.trim(),
+        });
+      }
+
+      await onUpdateUser(updated);
+      setSavedSuccess(true);
+      window.setTimeout(() => setSavedSuccess(false), 2000);
+    } catch (saveError) {
+      setError(getErrorMessage(saveError));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -127,21 +207,19 @@ export function UserProfileModal({
 
           <div className="flex items-center gap-4">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-lg font-extrabold text-white ring-2 ring-white/20">
-              {student.initials}
+              {user.initials}
             </span>
             <div className="min-w-0">
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-200 ring-1 ring-inset ring-white/15">
-                Conta do Estudante
+                {getRoleLabel(user)}
               </span>
               <h2
                 id="user-profile-modal-title"
                 className="mt-1.5 truncate text-base font-bold tracking-tight text-white sm:text-lg"
               >
-                {student.name}
+                {user.name}
               </h2>
-              <p className="truncate text-xs text-slate-300">
-                {student.course} · {student.registration}
-              </p>
+              <p className="truncate text-xs text-slate-300">{getRoleSubtitle(user)}</p>
             </div>
           </div>
         </div>
@@ -154,7 +232,6 @@ export function UserProfileModal({
             </p>
 
             <div className="space-y-2.5">
-              {/* Opção: Configurações */}
               <button
                 type="button"
                 onClick={() => setActiveTab("settings")}
@@ -169,7 +246,7 @@ export function UserProfileModal({
                       Configurações
                     </span>
                     <span className="mt-0.5 block text-xs text-slate-500">
-                      Editar perfil, curso e preferências do simulado
+                      Editar perfil, preferências e dados do seu papel
                     </span>
                   </div>
                 </div>
@@ -179,7 +256,6 @@ export function UserProfileModal({
                 />
               </button>
 
-              {/* Opção: Sair */}
               <button
                 type="button"
                 onClick={() => {
@@ -193,9 +269,7 @@ export function UserProfileModal({
                     <LogOut className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <div>
-                    <span className="block text-sm font-bold text-rose-700">
-                      Sair
-                    </span>
+                    <span className="block text-sm font-bold text-rose-700">Sair</span>
                     <span className="mt-0.5 block text-xs text-rose-600/80">
                       Encerrar sessão atual e sair do sistema
                     </span>
@@ -238,14 +312,14 @@ export function UserProfileModal({
             <div className="space-y-3.5">
               <div>
                 <label
-                  htmlFor="student-name-input"
+                  htmlFor="profile-name-input"
                   className="mb-1 flex items-center gap-1.5 text-xs font-bold text-slate-700"
                 >
                   <User className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
                   Nome completo
                 </label>
                 <input
-                  id="student-name-input"
+                  id="profile-name-input"
                   type="text"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -254,74 +328,208 @@ export function UserProfileModal({
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="student-course-input"
-                    className="mb-1 flex items-center gap-1.5 text-xs font-bold text-slate-700"
+              {user.role === "STUDENT" && (
+                <>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor="student-course-input"
+                        className="mb-1 flex items-center gap-1.5 text-xs font-bold text-slate-700"
+                      >
+                        <GraduationCap className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                        Curso
+                      </label>
+                      <input
+                        id="student-course-input"
+                        type="text"
+                        value={course}
+                        onChange={(event) => setCourse(event.target.value)}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="student-semester-input"
+                        className="mb-1 block text-xs font-bold text-slate-700"
+                      >
+                        Período atual
+                      </label>
+                      <input
+                        id="student-semester-input"
+                        type="number"
+                        min={1}
+                        max={14}
+                        value={semester}
+                        onChange={(event) => setSemester(event.target.value)}
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="student-weekly-goal-input"
+                      className="mb-1 block text-xs font-bold text-slate-700"
+                    >
+                      Meta semanal de questões
+                    </label>
+                    <input
+                      id="student-weekly-goal-input"
+                      type="number"
+                      min={5}
+                      max={200}
+                      value={weeklyGoalTarget}
+                      onChange={(event) => setWeeklyGoalTarget(Number(event.target.value))}
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3.5 space-y-2.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Preferências do Sistema
+                    </p>
+
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span className="text-xs font-semibold text-slate-700">
+                        Exibir tempo estimado na prova
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={showTimerInExam}
+                        onChange={(event) => setShowTimerInExam(event.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                    </label>
+
+                    <label className="flex cursor-pointer items-center justify-between gap-3">
+                      <span className="text-xs font-semibold text-slate-700">
+                        Mostrar resolução comentada após responder
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={instantFeedback}
+                        onChange={(event) => setInstantFeedback(event.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      />
+                    </label>
+                  </div>
+                </>
+              )}
+
+              {user.role === "PROFESSOR" && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="professor-department-input"
+                      className="mb-1 block text-xs font-bold text-slate-700"
+                    >
+                      Departamento
+                    </label>
+                    <input
+                      id="professor-department-input"
+                      type="text"
+                      value={department}
+                      onChange={(event) => setDepartment(event.target.value)}
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="professor-title-input"
+                      className="mb-1 block text-xs font-bold text-slate-700"
+                    >
+                      Título acadêmico
+                    </label>
+                    <input
+                      id="professor-title-input"
+                      type="text"
+                      value={academicTitle}
+                      onChange={(event) => setAcademicTitle(event.target.value)}
+                      placeholder="Ex.: Mestre, Doutor, Especialista"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="professor-areas-input"
+                      className="mb-1 block text-xs font-bold text-slate-700"
+                    >
+                      Áreas de especialização
+                    </label>
+                    <input
+                      id="professor-areas-input"
+                      type="text"
+                      value={specializationAreas}
+                      onChange={(event) => setSpecializationAreas(event.target.value)}
+                      placeholder="Separe as áreas por vírgula"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
+                    />
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold ring-1 ring-inset",
+                      user.isVerified
+                        ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                        : "bg-amber-50 text-amber-700 ring-amber-200",
+                    )}
                   >
-                    <GraduationCap className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                    Curso
-                  </label>
-                  <input
-                    id="student-course-input"
-                    type="text"
-                    value={course}
-                    onChange={(event) => setCourse(event.target.value)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
-                    required
-                  />
-                </div>
+                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>
+                      {user.isVerified
+                        ? "Cadastro docente validado. Você pode atuar na autoria de questões."
+                        : "Seu cadastro docente aguarda validação da Administração para publicar questões."}
+                    </span>
+                  </div>
+                </>
+              )}
 
-                <div>
-                  <label
-                    htmlFor="student-reg-input"
-                    className="mb-1 block text-xs font-bold text-slate-700"
-                  >
-                    Matrícula
-                  </label>
-                  <input
-                    id="student-reg-input"
-                    type="text"
-                    value={registration}
-                    onChange={(event) => setRegistration(event.target.value)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
-                    required
-                  />
-                </div>
-              </div>
+              {user.role === "ADMIN" && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="admin-sector-input"
+                      className="mb-1 block text-xs font-bold text-slate-700"
+                    >
+                      Setor
+                    </label>
+                    <input
+                      id="admin-sector-input"
+                      type="text"
+                      value={sector}
+                      onChange={(event) => setSector(event.target.value)}
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 text-xs font-medium text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:text-sm"
+                      required
+                    />
+                  </div>
 
-              {/* Preferências de estudo */}
-              <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3.5 space-y-2.5">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Preferências do Sistema
-                </p>
-
-                <label className="flex cursor-pointer items-center justify-between gap-3">
-                  <span className="text-xs font-semibold text-slate-700">
-                    Exibir tempo estimado na prova
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={showTimerInExam}
-                    onChange={(event) => setShowTimerInExam(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                  />
-                </label>
-
-                <label className="flex cursor-pointer items-center justify-between gap-3">
-                  <span className="text-xs font-semibold text-slate-700">
-                    Mostrar resolução comentada após responder
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={instantFeedback}
-                    onChange={(event) => setInstantFeedback(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                  />
-                </label>
-              </div>
+                  <div className="rounded-xl bg-slate-50 px-3.5 py-2.5 ring-1 ring-inset ring-slate-200">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Nível de acesso
+                    </p>
+                    <p className="mt-0.5 text-xs font-bold text-slate-800">
+                      {user.accessLevel === "SUPER_ADMIN" ? "Super Administrador" : "Coordenação"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      Código funcional: {user.employeeCode}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
+
+            {error && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl bg-rose-50 px-3.5 py-2 text-xs font-bold text-rose-700 ring-1 ring-inset ring-rose-200">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                {error}
+              </div>
+            )}
 
             {savedSuccess && (
               <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
@@ -337,9 +545,7 @@ export function UserProfileModal({
                   onClose();
                   onLogout();
                 }}
-                className={cn(
-                  "inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/60 px-3.5 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100",
-                )}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/60 px-3.5 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
               >
                 <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                 Sair do sistema
@@ -355,9 +561,10 @@ export function UserProfileModal({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700 sm:flex-initial"
+                  disabled={isSaving}
+                  className="flex-1 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-initial"
                 >
-                  Salvar
+                  {isSaving ? "Salvando..." : "Salvar"}
                 </button>
               </div>
             </div>

@@ -7,7 +7,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { AccessPortalScreen } from "./components/AccessPortalScreen";
-import { AdminAccessScreen } from "./components/AdminAccessScreen";
+import {
+  AdminManagementModal,
+  type AdminPanelTab,
+} from "./components/AdminManagementModal";
+import { AuthModal } from "./components/AuthModal";
 import { Header, type AppView } from "./components/Header";
 import { AppSidebar } from "./components/AppSidebar";
 import { Dashboard } from "./components/Dashboard";
@@ -15,104 +19,34 @@ import { MetricsModal } from "./components/MetricsModal";
 import { QuestionSidebar } from "./components/QuestionSidebar";
 import { QuestionCard } from "./components/QuestionCard";
 import { ResultsModal } from "./components/ResultsModal";
-import { StudentLoginScreen } from "./components/StudentLoginScreen";
 import { UserProfileModal, type UserModalTab } from "./components/UserProfileModal";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useSimulado } from "./hooks/useSimulado";
 import { examMeta, filterQuestionsByContext, questions, student } from "./data/questions";
 import { availableYears, studyAreas } from "./data/areas";
 import { cn } from "./lib/utils";
-import type {
-  AuthRole,
-  AuthScreenStep,
-  AuthSession,
-  StudentLoginCredentials,
-} from "./types/auth";
+import type { AuthRole } from "./types/auth";
+import type { AppUser } from "./types/user";
 import type { SimuladoNavigationContext, StudentProfile } from "./types/question";
 
-const AUTH_SESSION_STORAGE_KEY = "simula-enade:auth-session";
+const AUTH_ROLE_TO_USER_ROLE: Record<AuthRole, AppUser["role"]> = {
+  student: "STUDENT",
+  professor: "PROFESSOR",
+  admin: "ADMIN",
+};
 
-function readStoredSession(): AuthSession | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw =
-      window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY) ??
-      window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<AuthSession>;
-    if (parsed.role === "student" && typeof parsed.identifier === "string") {
-      return {
-        role: "student",
-        identifier: parsed.identifier,
-        studentName:
-          typeof parsed.studentName === "string" && parsed.studentName.trim()
-            ? parsed.studentName
-            : student.name,
-        studentInitials:
-          typeof parsed.studentInitials === "string" && parsed.studentInitials.trim()
-            ? parsed.studentInitials
-            : student.initials,
-        authenticatedAt:
-          typeof parsed.authenticatedAt === "string"
-            ? parsed.authenticatedAt
-            : new Date().toISOString(),
-      };
-    }
-  } catch {
-    return null;
+function buildStudentProfile(user: AppUser): StudentProfile {
+  if (user.role === "STUDENT") {
+    return {
+      ...student,
+      name: user.name,
+      initials: user.initials,
+      registration: user.registration,
+      course: user.course,
+    };
   }
 
-  return null;
-}
-
-function clearStoredSession(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
-    window.sessionStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
-  } catch {
-    // Ignore storage access errors
-  }
-}
-
-function buildStudentProfileFromIdentifier(identifier: string): StudentProfile {
-  const normalized = identifier.trim().toLowerCase();
-  const defaultMatches = [
-    "ana.moraes@enade.edu.br",
-    "ana.moraes",
-    "aluno@enade.edu.br",
-    student.registration.toLowerCase(),
-  ];
-
-  if (defaultMatches.includes(normalized)) {
-    return student;
-  }
-
-  const localPart = identifier.includes("@") ? identifier.split("@")[0] : identifier;
-  const words = localPart
-    .replace(/[._-]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (words.length === 0) {
-    return student;
-  }
-
-  const formattedName = words
-    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
-    .join(" ");
-
-  const initials =
-    words.length === 1
-      ? words[0].slice(0, 2).toUpperCase()
-      : `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
-
-  return {
-    ...student,
-    name: formattedName,
-    initials,
-  };
+  return { ...student, name: user.name, initials: user.initials };
 }
 
 function readInitialRouteFromUrl(): {
@@ -152,24 +86,17 @@ function readInitialRouteFromUrl(): {
   return { view: "dashboard", context: null };
 }
 
-export default function App() {
-  const [authSession, setAuthSession] = useState<AuthSession | null>(readStoredSession);
-  const [authStep, setAuthStep] = useState<AuthScreenStep>("select-role");
+function AppContent() {
+  const { user, isLoading: isAuthLoading, logout, updateUser } = useAuth();
+  const [authModalRole, setAuthModalRole] = useState<AppUser["role"] | null>(null);
   const [showLogoutNotice, setShowLogoutNotice] = useState(false);
   const [routeState, setRouteState] = useState(readInitialRouteFromUrl);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile>(() => {
-    const stored = readStoredSession();
-    if (!stored) return student;
-    return {
-      ...student,
-      name: stored.studentName,
-      initials: stored.studentInitials,
-    };
-  });
+  const [studentProfile, setStudentProfile] = useState<StudentProfile>(student);
   const [isResultsOpen, setIsResultsOpen] = useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userModalTab, setUserModalTab] = useState<UserModalTab>("menu");
+  const [adminPanelTab, setAdminPanelTab] = useState<AdminPanelTab | null>(null);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
@@ -204,6 +131,10 @@ export default function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (user) setStudentProfile(buildStudentProfile(user));
+  }, [user]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -304,54 +235,7 @@ export default function App() {
 
   const handleSelectAuthRole = (role: AuthRole) => {
     setShowLogoutNotice(false);
-    setAuthStep(role === "student" ? "student-login" : "admin-login");
-  };
-
-  const handleStudentLogin = ({ identifier, rememberMe }: StudentLoginCredentials) => {
-    const profile = buildStudentProfileFromIdentifier(identifier);
-    const nextSession: AuthSession = {
-      role: "student",
-      identifier,
-      studentName: profile.name,
-      studentInitials: profile.initials,
-      authenticatedAt: new Date().toISOString(),
-    };
-
-    clearStoredSession();
-    if (typeof window !== "undefined") {
-      try {
-        const storage = rememberMe ? window.localStorage : window.sessionStorage;
-        storage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(nextSession));
-      } catch {
-        // Ignore storage access errors
-      }
-    }
-
-    setStudentProfile(profile);
-    setAuthSession(nextSession);
-    setShowLogoutNotice(false);
-  };
-
-  const handleUpdateStudentProfile = (updated: StudentProfile) => {
-    setStudentProfile(updated);
-    if (!authSession || typeof window === "undefined") return;
-
-    const updatedSession: AuthSession = {
-      ...authSession,
-      studentName: updated.name,
-      studentInitials: updated.initials,
-    };
-    setAuthSession(updatedSession);
-
-    try {
-      if (window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY)) {
-        window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
-      } else if (window.sessionStorage.getItem(AUTH_SESSION_STORAGE_KEY)) {
-        window.sessionStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
-      }
-    } catch {
-      // Ignore storage access errors
-    }
+    setAuthModalRole(AUTH_ROLE_TO_USER_ROLE[role]);
   };
 
   const handleLogout = () => {
@@ -359,37 +243,34 @@ export default function App() {
     setIsMetricsOpen(false);
     setIsResultsOpen(false);
     setIsMobileNavOpen(false);
-    clearStoredSession();
-    setAuthSession(null);
-    setAuthStep("select-role");
+    setAuthModalRole(null);
+    setAdminPanelTab(null);
+    logout();
     setShowLogoutNotice(true);
   };
 
-  if (!authSession) {
-    if (authStep === "student-login") {
-      return (
-        <StudentLoginScreen
-          onBack={() => setAuthStep("select-role")}
-          onSwitchToAdmin={() => setAuthStep("admin-login")}
-          onSubmitLogin={handleStudentLogin}
-        />
-      );
-    }
-
-    if (authStep === "admin-login") {
-      return (
-        <AdminAccessScreen
-          onBack={() => setAuthStep("select-role")}
-          onSwitchToStudent={() => setAuthStep("student-login")}
-        />
-      );
-    }
-
+  if (isAuthLoading) {
     return (
-      <AccessPortalScreen
-        logoutNotice={showLogoutNotice}
-        onSelectRole={handleSelectAuthRole}
-      />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <p className="text-sm font-semibold text-slate-500">Carregando sua sessão...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <AccessPortalScreen
+          logoutNotice={showLogoutNotice}
+          onSelectRole={handleSelectAuthRole}
+        />
+        {authModalRole && (
+          <AuthModal
+            initialRole={authModalRole}
+            onClose={() => setAuthModalRole(null)}
+          />
+        )}
+      </>
     );
   }
 
@@ -402,17 +283,20 @@ export default function App() {
         activeView={activeView}
         activeYear={navContext?.year}
         activeAreaSlug={navContext?.areaSlug}
+        user={user}
         onToggleExpand={() => setIsSidebarExpanded((value) => !value)}
         onCloseMobile={() => setIsMobileNavOpen(false)}
         onNavigateHome={handleNavigateHome}
         onStartSimulado={handleNavigateToSimulado}
         onOpenMetrics={() => setIsMetricsOpen(true)}
+        onOpenAdminPanel={(tab) => setAdminPanelTab(tab)}
       />
 
       {/* Área Principal (Header limpo + Conteúdo) */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Header
           exam={examMeta}
+          user={user}
           student={studentProfile}
           stats={stats}
           activeView={activeView}
@@ -596,11 +480,26 @@ export default function App() {
       <UserProfileModal
         isOpen={isUserModalOpen}
         initialTab={userModalTab}
-        student={studentProfile}
+        user={user}
         onClose={() => setIsUserModalOpen(false)}
-        onUpdateStudent={handleUpdateStudentProfile}
+        onUpdateUser={updateUser}
         onLogout={handleLogout}
       />
+
+      {/* Painel Administrativo (aprovação de docentes e gestão de contas) */}
+      <AdminManagementModal
+        isOpen={adminPanelTab !== null}
+        initialTab={adminPanelTab ?? "professors"}
+        onClose={() => setAdminPanelTab(null)}
+      />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
