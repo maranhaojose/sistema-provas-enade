@@ -19,6 +19,12 @@ import {
 import type { StudentLoginCredentials } from "../types/auth";
 import { availableYears, studyAreas } from "../data/areas";
 import { questions } from "../data/questions";
+import {
+  hasValidationErrors,
+  validateEmail,
+  validateLoginForm,
+  validatePassword,
+} from "../lib/authValidation";
 import { cn } from "../lib/utils";
 
 const DEMO_STUDENT_IDENTIFIER = "ana.moraes@enade.edu.br";
@@ -45,23 +51,20 @@ export function StudentLoginScreen({
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRecoveryHint, setShowRecoveryHint] = useState(false);
 
   const validateForm = (): FormErrors => {
+    const validation = validateLoginForm({ email: identifier, password });
     const nextErrors: FormErrors = {};
-    const trimmedIdentifier = identifier.trim();
 
-    if (!trimmedIdentifier) {
-      nextErrors.identifier = "Informe seu e-mail ou nome de usuário.";
-    } else if (trimmedIdentifier.length < 3) {
-      nextErrors.identifier = "O e-mail ou usuário deve ter pelo menos 3 caracteres.";
+    if (validation.email) {
+      nextErrors.identifier = validation.email;
     }
 
-    if (!password) {
-      nextErrors.password = "Informe sua senha de acesso.";
-    } else if (password.length < 4) {
-      nextErrors.password = "A senha deve conter no mínimo 4 caracteres.";
+    if (validation.password) {
+      nextErrors.password = validation.password;
     }
 
     return nextErrors;
@@ -72,10 +75,21 @@ export function StudentLoginScreen({
     const validationErrors = validateForm();
     setErrors(validationErrors);
 
-    if (Object.keys(validationErrors).length > 0) {
+    if (
+      hasValidationErrors({
+        email: validationErrors.identifier,
+        password: validationErrors.password,
+      })
+    ) {
+      setFormError("Verifique os campos destacados antes de continuar.");
+      const firstInvalidId = validationErrors.identifier
+        ? "student-identifier"
+        : "student-password";
+      document.getElementById(firstInvalidId)?.focus();
       return;
     }
 
+    setFormError(null);
     setIsSubmitting(true);
     window.setTimeout(() => {
       onSubmitLogin({
@@ -91,6 +105,7 @@ export function StudentLoginScreen({
     setIdentifier(DEMO_STUDENT_IDENTIFIER);
     setPassword(DEMO_STUDENT_PASSWORD);
     setErrors({});
+    setFormError(null);
     setShowRecoveryHint(false);
   };
 
@@ -218,19 +233,37 @@ export function StudentLoginScreen({
                   Acesse sua conta
                 </h2>
                 <p className="mt-1.5 text-xs font-medium text-slate-500 sm:text-sm">
-                  Informe seu e-mail ou usuário e sua senha para entrar na plataforma.
+                  Informe seu e-mail e sua senha para entrar na plataforma.
                 </p>
               </div>
 
+              {formError && (
+                <div
+                  role="alert"
+                  className="mt-5 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              <p className="mt-4 text-[11px] font-medium text-slate-500">
+                Campos marcados com <span className="font-bold text-rose-500">*</span> são
+                obrigatórios.
+              </p>
+
               {/* Formulário de autenticação */}
-              <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
-                {/* Campo: E-mail ou usuário */}
+              <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
+                {/* Campo: E-mail */}
                 <div>
                   <label
                     htmlFor="student-identifier"
                     className="mb-1.5 block text-xs font-bold text-slate-700"
                   >
-                    E-mail ou usuário
+                    E-mail
+                    <span className="ml-0.5 text-rose-500" aria-hidden="true">
+                      *
+                    </span>
                   </label>
                   <div className="relative">
                     <Mail
@@ -243,16 +276,29 @@ export function StudentLoginScreen({
                     <input
                       id="student-identifier"
                       name="identifier"
-                      type="text"
-                      autoComplete="username"
+                      type="email"
+                      required
+                      aria-required="true"
+                      autoComplete="email"
                       value={identifier}
                       onChange={(event) => {
-                        setIdentifier(event.target.value);
+                        const nextValue = event.target.value;
+                        setIdentifier(nextValue);
+                        if (formError) setFormError(null);
                         if (errors.identifier) {
-                          setErrors((prev) => ({ ...prev, identifier: undefined }));
+                          setErrors((prev) => ({
+                            ...prev,
+                            identifier: validateEmail(nextValue),
+                          }));
                         }
                       }}
-                      placeholder="aluno@enade.edu.br ou seu usuário"
+                      onBlur={() =>
+                        setErrors((prev) => ({
+                          ...prev,
+                          identifier: validateEmail(identifier),
+                        }))
+                      }
+                      placeholder="aluno@enade.edu.br"
                       aria-invalid={Boolean(errors.identifier)}
                       aria-describedby={errors.identifier ? "student-identifier-error" : undefined}
                       className={cn(
@@ -283,6 +329,9 @@ export function StudentLoginScreen({
                       className="block text-xs font-bold text-slate-700"
                     >
                       Senha
+                      <span className="ml-0.5 text-rose-500" aria-hidden="true">
+                        *
+                      </span>
                     </label>
                     <button
                       type="button"
@@ -304,14 +353,27 @@ export function StudentLoginScreen({
                       id="student-password"
                       name="password"
                       type={showPassword ? "text" : "password"}
+                      required
+                      aria-required="true"
                       autoComplete="current-password"
                       value={password}
                       onChange={(event) => {
-                        setPassword(event.target.value);
+                        const nextValue = event.target.value;
+                        setPassword(nextValue);
+                        if (formError) setFormError(null);
                         if (errors.password) {
-                          setErrors((prev) => ({ ...prev, password: undefined }));
+                          setErrors((prev) => ({
+                            ...prev,
+                            password: validatePassword(nextValue, "login"),
+                          }));
                         }
                       }}
+                      onBlur={() =>
+                        setErrors((prev) => ({
+                          ...prev,
+                          password: validatePassword(password, "login"),
+                        }))
+                      }
                       placeholder="Digite sua senha"
                       aria-invalid={Boolean(errors.password)}
                       aria-describedby={errors.password ? "student-password-error" : undefined}

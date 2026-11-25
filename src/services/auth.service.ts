@@ -58,11 +58,13 @@ export interface RawUser {
 
 export class AuthError extends Error {
   readonly status: number;
+  readonly fieldErrors?: Record<string, string[]>;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, fieldErrors?: Record<string, string[]>) {
     super(message);
     this.name = "AuthError";
     this.status = status;
+    this.fieldErrors = fieldErrors;
   }
 }
 
@@ -142,7 +144,18 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
       payload && typeof payload === "object" && "message" in payload
         ? String((payload as { message: unknown }).message)
         : "Não foi possível completar a solicitação.";
-    throw new AuthError(message, response.status);
+    const fieldErrors =
+      payload &&
+      typeof payload === "object" &&
+      "details" in payload &&
+      payload.details &&
+      typeof payload.details === "object" &&
+      "fieldErrors" in payload.details &&
+      payload.details.fieldErrors &&
+      typeof payload.details.fieldErrors === "object"
+        ? (payload.details.fieldErrors as Record<string, string[]>)
+        : undefined;
+    throw new AuthError(message, response.status, fieldErrors);
   }
 
   return payload as T;
