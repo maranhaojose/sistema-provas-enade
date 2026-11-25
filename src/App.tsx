@@ -309,7 +309,7 @@ function AppContent() {
         />
 
         {activeView === "dashboard" ? (
-          <Dashboard answers={answers} onStartSimulado={handleNavigateToSimulado} />
+          <Dashboard user={user} answers={answers} onStartSimulado={handleNavigateToSimulado} />
         ) : (
           <main className="mx-auto w-full max-w-[1360px] px-4 pb-16 pt-5 sm:px-6">
             {/* Linha de contexto, filtro rápido por ano e retorno */}

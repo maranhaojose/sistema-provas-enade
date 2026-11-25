@@ -49,6 +49,11 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .bg-dot-grid {
+    background-image: radial-gradient(rgb(148 163 184 / 0.28) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
