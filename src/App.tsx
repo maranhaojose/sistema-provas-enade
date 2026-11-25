@@ -87,7 +87,7 @@ function readInitialRouteFromUrl(): {
 }
 
 function AppContent() {
-  const { user, isLoading: isAuthLoading, logout, updateUser } = useAuth();
+  const { user, isInitializing: isAuthInitializing, logout, updateUser } = useAuth();
   const [authModalRole, setAuthModalRole] = useState<AppUser["role"] | null>(null);
   const [showLogoutNotice, setShowLogoutNotice] = useState(false);
   const [routeState, setRouteState] = useState(readInitialRouteFromUrl);
@@ -238,6 +238,15 @@ function AppContent() {
     setAuthModalRole(AUTH_ROLE_TO_USER_ROLE[role]);
   };
 
+  const handleAuthSuccess = () => {
+    setAuthModalRole(null);
+    setShowLogoutNotice(false);
+    if (typeof window !== "undefined") {
+      window.history.replaceState({ view: "dashboard" }, "", window.location.pathname);
+    }
+    setRouteState({ view: "dashboard", context: null });
+  };
+
   const handleLogout = () => {
     setIsUserModalOpen(false);
     setIsMetricsOpen(false);
@@ -249,7 +258,7 @@ function AppContent() {
     setShowLogoutNotice(true);
   };
 
-  if (isAuthLoading) {
+  if (isAuthInitializing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <p className="text-sm font-semibold text-slate-500">Carregando sua sessão...</p>
@@ -268,6 +277,7 @@ function AppContent() {
           <AuthModal
             initialRole={authModalRole}
             onClose={() => setAuthModalRole(null)}
+            onAuthSuccess={handleAuthSuccess}
           />
         )}
       </>

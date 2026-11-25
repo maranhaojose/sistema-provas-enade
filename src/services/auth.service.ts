@@ -1,7 +1,18 @@
 import type { AppUser } from "../types/user";
 
 const TOKEN_STORAGE_KEY = "simula_enade_token";
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3333/api";
+const DEFAULT_API_BASE_URL = "http://localhost:3333/api";
+
+function resolveApiBaseUrl(): string {
+  const envUrl =
+    typeof import.meta !== "undefined" && import.meta.env
+      ? (import.meta.env.VITE_API_URL as string | undefined)
+      : undefined;
+  const rawUrl = envUrl?.trim() || DEFAULT_API_BASE_URL;
+  return rawUrl.replace(/\/+$/, "");
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export interface RegisterStudentPayload {
   name: string;
@@ -127,41 +138,66 @@ function storeToken(token: string): void {
   }
 }
 
+function extractFieldErrors(payload: unknown): Record<string, string[]> | undefined {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "details" in payload &&
+    payload.details &&
+    typeof payload.details === "object" &&
+    "fieldErrors" in payload.details &&
+    payload.details.fieldErrors &&
+    typeof payload.details.fieldErrors === "object"
+  ) {
+    return payload.details.fieldErrors as Record<string, string[]>;
+  }
+  return undefined;
+}
+
+function getFallbackHttpErrorMessage(status: number): string {
+  if (status === 401) return "Sessão expirada ou credenciais inválidas.";
+  if (status === 403) return "Você não tem permissão para realizar esta ação.";
+  if (status >= 500) return "Erro interno no servidor. Tente novamente em instantes.";
+  return "Não foi possível completar a solicitação.";
+}
+
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  });
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
+  } catch {
+    throw new AuthError(
+      "Não foi possível conectar ao servidor. Verifique se a API está em execução e tente novamente.",
+      0,
+    );
+  }
 
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const message =
       payload && typeof payload === "object" && "message" in payload
         ? String((payload as { message: unknown }).message)
-        : "Não foi possível completar a solicitação.";
-    const fieldErrors =
-      payload &&
-      typeof payload === "object" &&
-      "details" in payload &&
-      payload.details &&
-      typeof payload.details === "object" &&
-      "fieldErrors" in payload.details &&
-      payload.details.fieldErrors &&
-      typeof payload.details.fieldErrors === "object"
-        ? (payload.details.fieldErrors as Record<string, string[]>)
-        : undefined;
-    throw new AuthError(message, response.status, fieldErrors);
+        : getFallbackHttpErrorMessage(response.status);
+    throw new AuthError(message, response.status, extractFieldErrors(payload));
   }
 
   return payload as T;
 }
 
 function saveSession(response: AuthResponse): Session {
+  if (!response?.token || !response?.user) {
+    throw new AuthError("Resposta de autenticação inválida recebida do servidor.", 500);
+  }
   storeToken(response.token);
   return { token: response.token, user: normalizeUser(response.user) };
 }

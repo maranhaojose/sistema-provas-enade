@@ -34,6 +34,7 @@ import type { AppUser } from "../types/user";
 interface AuthModalProps {
   readonly initialRole: AppUser["role"];
   readonly onClose: () => void;
+  readonly onAuthSuccess?: () => void;
 }
 
 const ROLE_LABELS: Record<AppUser["role"], string> = {
@@ -106,7 +107,7 @@ function FieldErrorMessage({ id, message }: { readonly id: string; readonly mess
   );
 }
 
-export function AuthModal({ initialRole, onClose }: AuthModalProps) {
+export function AuthModal({ initialRole, onClose, onAuthSuccess }: AuthModalProps) {
   const { login, registerStudent, registerProfessor, error, clearError, isLoading } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [role, setRole] = useState<"STUDENT" | "PROFESSOR">(
@@ -261,7 +262,11 @@ export function AuthModal({ initialRole, onClose }: AuthModalProps) {
             .filter(Boolean),
         });
       }
-      onClose();
+      if (onAuthSuccess) {
+        onAuthSuccess();
+      } else {
+        onClose();
+      }
     } catch (submitError) {
       if (submitError instanceof AuthError && submitError.fieldErrors) {
         const mappedServerErrors = mapServerFieldErrors(submitError.fieldErrors);

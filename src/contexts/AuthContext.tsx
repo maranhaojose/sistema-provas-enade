@@ -18,6 +18,7 @@ interface AuthContextValue {
   readonly user: AppUser | null;
   readonly token: string | null;
   readonly isAuthenticated: boolean;
+  readonly isInitializing: boolean;
   readonly isLoading: boolean;
   readonly error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -37,7 +38,8 @@ function getErrorMessage(error: unknown): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function restoreSession() {
       if (!authService.hasToken()) {
-        setIsLoading(false);
+        setIsInitializing(false);
         return;
       }
 
@@ -56,9 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(authService.readToken());
       } catch {
         authService.clearToken();
-        if (!cancelled) setUser(null);
+        if (!cancelled) {
+          setUser(null);
+          setToken(null);
+        }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) setIsInitializing(false);
       }
     }
 
@@ -131,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       isAuthenticated: Boolean(user),
+      isInitializing,
       isLoading,
       error,
       login,
@@ -143,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [
       user,
       token,
+      isInitializing,
       isLoading,
       error,
       login,
